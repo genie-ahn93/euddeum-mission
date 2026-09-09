@@ -292,6 +292,10 @@ img { max-width: 100%; }
   word-break: keep-all;
   overflow-wrap: normal;
 }
+.score-lines {
+  display: grid;
+  gap: 2px;
+}
 .notice-summary-text b { color: #6c571d; }
 .notice-summary-text strong { color: #8d5523; font-weight: 900; }
 .notice-summary-text .notice-open { color: #1f5b43; font-size: 15px; }
@@ -305,13 +309,20 @@ img { max-width: 100%; }
 .score-notice[open] .notice-more::after { content: ' 접기'; }
 .score-notice:not([open]) .notice-more::after { content: ''; }
 .notice-detail {
+.notice-detail {
   border-top: 1px solid rgba(36, 87, 66, .12);
-  padding: 18px 20px 20px 49px;
+  padding: 18px 20px 20px;
   color: #5b655e;
   font-size: 13px;
   line-height: 1.75;
   word-break: keep-all;
   overflow-wrap: normal;
+}
+  .notice-detail p,
+.notice-detail .notice-example,
+.notice-detail .notice-divider {
+  margin-left: 0;
+  padding-left: 0;
 }
 .notice-detail p { margin: 0 0 14px; }
 .notice-detail strong, .notice-detail b { color: #214c39; }
