@@ -5,7 +5,6 @@ import {
   Check,
   ExternalLink,
   ImagePlus,
-  Info,
   Loader2,
   Sparkles,
   Upload,
@@ -322,20 +321,37 @@ function App() {
         <aside className="intro-panel">
           <div>
             <p className="eyebrow"><Sparkles size={15} /> EXTRA MISSION</p>
-            <h1 className="hero-title">
-              <span className="desktop-title">시흥시으뜸성장챌린지<br />추가미션</span>
-              <span className="mobile-title">시흥시<br />으뜸성장챌린지<br />추가미션</span>
-            </h1>
-            <details className="score-notice" open={false}>
-              <summary>
-                <span className="notice-icon"><Info size={18} /></span>
-                <span className="notice-summary-text">
-                  <strong className="notice-open">🎯 추가미션 OPEN!</strong>
-                  <span>미션 1개 완료 시 <b>+2점</b>, 최대 5개 참여 시 <b>총 +10점</b></span>
-                  <span>추가점수는 기본 활동비 수여 기준 점수에는 포함되지만, <strong>1~2위 상위 활동비 순위 산정에는 반영되지 않습니다.</strong></span>
-                </span>
-                <span className="notice-more">자세히 보기</span>
-              </summary>
+<h1 className="hero-title">
+  <span className="desktop-title">
+    시흥시<br />
+    으뜸성장챌린지<br />
+    추가미션
+  </span>
+
+  <span className="mobile-title">
+    시흥시<br />
+    으뜸성장챌린지<br />
+    추가미션
+  </span>
+</h1>
+
+<details className="score-notice" open={false}>
+  <summary>
+    <span className="notice-summary-text">
+      <strong className="notice-open">🎯 추가미션 OPEN!</strong>
+
+      <span>
+        미션 1개 완료 시 <b>+2점</b>, 최대 5개 참여 시 <b>총 +10점</b>
+      </span>
+
+      <span>
+        추가점수는 기본 활동비 수여 기준 점수에는 포함되지만,
+        <strong> 1~2위 상위 활동비 순위 산정에는 반영되지 않습니다.</strong>
+      </span>
+    </span>
+
+    <span className="notice-more">자세히 보기</span>
+  </summary>
 
               <div className="notice-detail">
                 <p><strong>으뜸성장챌린지, 아직 끝난 거 아니죠? 😎</strong><br />지속적인 참여를 응원하기 위한 <b>추가미션</b>이 열렸습니다!</p>
