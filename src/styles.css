@@ -283,7 +283,6 @@ img { max-width: 100%; }
   user-select: none;
 }
 .score-notice summary::-webkit-details-marker { display: none; }
-.notice-icon { color: #9c7a24; margin-top: 2px; display: grid; }
 .notice-summary-text {
   display: grid;
   gap: 5px;
