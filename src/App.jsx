@@ -9,7 +9,17 @@ import {
   Sparkles,
   Upload,
   X,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Eye,
+  Images,
+  LockKeyhole,
+  LogOut,
+  RefreshCw,
+  ShieldCheck,
 } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import { supabase } from './supabase'
 
 const MISSIONS = [
@@ -111,9 +121,12 @@ const MISSIONS = [
   },
 ]
 
+const LEVELS = ['골드', '플래티넘', '마스터', '드림']
+
 const INITIAL_FORM = {
   name: '',
   phone: '',
+  level: '',
   activityDate: new Date().toISOString().slice(0, 10),
   answers: ['', '', ''],
   explanation: '',
@@ -132,7 +145,70 @@ function safeFileName(name) {
   return cleaned || 'image'
 }
 
+async function compressImage(file) {
+  const MAX_DIMENSION = 1600
+  const JPEG_QUALITY = 0.82
+  const SKIP_UNDER_BYTES = 700 * 1024
+
+  const objectUrl = URL.createObjectURL(file)
+
+  try {
+    const image = new Image()
+    image.decoding = 'async'
+
+    await new Promise((resolve, reject) => {
+      image.onload = resolve
+      image.onerror = () => reject(new Error('이미지를 불러올 수 없습니다.'))
+      image.src = objectUrl
+    })
+
+    const originalWidth = image.naturalWidth
+    const originalHeight = image.naturalHeight
+    const longestSide = Math.max(originalWidth, originalHeight)
+
+    if (file.size <= SKIP_UNDER_BYTES && longestSide <= MAX_DIMENSION) {
+      return file
+    }
+
+    const scale = longestSide > MAX_DIMENSION ? MAX_DIMENSION / longestSide : 1
+    const width = Math.max(1, Math.round(originalWidth * scale))
+    const height = Math.max(1, Math.round(originalHeight * scale))
+
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+
+    const context = canvas.getContext('2d')
+    if (!context) throw new Error('이미지 압축을 준비할 수 없습니다.')
+
+    context.imageSmoothingEnabled = true
+    context.imageSmoothingQuality = 'high'
+    context.drawImage(image, 0, 0, width, height)
+
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (result) => result ? resolve(result) : reject(new Error('이미지 압축에 실패했습니다.')),
+        'image/jpeg',
+        JPEG_QUALITY,
+      )
+    })
+
+    const baseName = file.name.replace(/\.[^.]+$/, '') || 'image'
+    return new File(
+      [blob],
+      `${baseName}.jpg`,
+      { type: 'image/jpeg', lastModified: Date.now() },
+    )
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
+}
+
 function App() {
+  if (window.location.pathname.startsWith('/admin')) {
+    return <AdminPage />
+  }
+
   const [step, setStep] = useState(1)
   const [selectedMissionId, setSelectedMissionId] = useState(null)
   const [form, setForm] = useState(INITIAL_FORM)
@@ -140,6 +216,7 @@ function App() {
   const [previews, setPreviews] = useState([])
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isProcessingPhotos, setIsProcessingPhotos] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
   const mission = useMemo(
@@ -185,31 +262,51 @@ function App() {
       setError('연락처를 010-0000-0000 형식으로 입력해주세요.')
       return
     }
+    if (!LEVELS.includes(form.level)) {
+      setError('참여 레벨을 선택해주세요.')
+      return
+    }
     setError('')
     setStep(3)
   }
 
-  const handleFiles = (event) => {
+  const handleFiles = async (event) => {
     const incoming = Array.from(event.target.files ?? [])
+    event.target.value = ''
     if (!incoming.length) return
 
     const allowed = ['image/jpeg', 'image/png', 'image/webp']
     for (const file of incoming) {
       if (!allowed.includes(file.type)) {
         setError('JPG, JPEG, PNG, WEBP 이미지 파일만 업로드할 수 있어요.')
-        event.target.value = ''
         return
       }
       if (file.size > 10 * 1024 * 1024) {
-        setError('사진은 한 장당 최대 10MB까지 업로드할 수 있어요.')
-        event.target.value = ''
+        setError('원본 사진은 한 장당 최대 10MB까지 선택할 수 있어요.')
         return
       }
     }
 
-    setPhotos((prev) => [...prev, ...incoming].slice(0, 3))
+    const availableSlots = Math.max(0, 3 - photos.length)
+    const targets = incoming.slice(0, availableSlots)
+    if (!targets.length) return
+
+    setIsProcessingPhotos(true)
     setError('')
-    event.target.value = ''
+
+    try {
+      const compressed = []
+      for (const file of targets) {
+        compressed.push(await compressImage(file))
+      }
+
+      setPhotos((prev) => [...prev, ...compressed].slice(0, 3))
+    } catch (err) {
+      console.error('이미지 압축 오류:', err)
+      setError('사진 처리 중 오류가 발생했습니다. 다른 사진으로 다시 시도해주세요.')
+    } finally {
+      setIsProcessingPhotos(false)
+    }
   }
 
   const removePhoto = (index) => {
@@ -236,7 +333,7 @@ function App() {
   }
 
   const handleSubmit = async () => {
-    if (isSubmitting) return
+    if (isSubmitting || isProcessingPhotos) return
     const validationError = validateSubmission()
     if (validationError) {
       setError(validationError)
@@ -266,6 +363,7 @@ function App() {
       const { error: insertError } = await supabase.from('submissions').insert({
         participant_name: form.name.trim(),
         phone: form.phone,
+        level: form.level,
         mission_id: mission.id,
         activity_date: form.activityDate,
         answer_1: form.answers[0].trim(),
@@ -457,6 +555,20 @@ function App() {
                 />
               </label>
 
+              <label className="field-label">
+                <span className="field-title">참여 레벨 <em>*</em></span>
+                <select
+                  className="text-input select-input"
+                  value={form.level}
+                  onChange={(e) => setField('level', e.target.value)}
+                >
+                  <option value="">레벨을 선택해주세요</option>
+                  {LEVELS.map((level) => (
+                    <option key={level} value={level}>{level}</option>
+                  ))}
+                </select>
+              </label>
+
               {error && <ErrorBox message={error} />}
               <div className="action-row split">
                 <button className="ghost-button" onClick={() => { setStep(1); setError('') }}>
@@ -522,21 +634,21 @@ function App() {
                     <strong className="field-title upload-title">
                       인증사진 {mission.id === 8 ? null : <em>*</em>}
                     </strong>
-                    <span>JPG · JPEG · PNG · WEBP / 장당 최대 10MB / 최대 3장</span>
+                    <span>JPG · JPEG · PNG · WEBP / 원본 장당 최대 10MB / 최대 3장 · 선택 후 자동 압축</span>
                   </div>
                   <span>{photos.length}/3</span>
                 </div>
 
-                <label className={`upload-drop ${photos.length >= 3 ? 'disabled' : ''}`}>
-                  <Upload size={24} />
-                  <strong>사진 선택하기</strong>
-                  <span>휴대폰 사진 또는 캡처 이미지를 선택해주세요.</span>
+                <label className={`upload-drop ${photos.length >= 3 || isProcessingPhotos ? 'disabled' : ''}`}>
+                  {isProcessingPhotos ? <Loader2 className="spin" size={24} /> : <Upload size={24} />}
+                  <strong>{isProcessingPhotos ? '사진 압축 중...' : '사진 선택하기'}</strong>
+                  <span>{isProcessingPhotos ? '잠시만 기다려주세요.' : '휴대폰 사진 또는 캡처 이미지를 선택해주세요.'}</span>
                   <input
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
                     multiple
                     onChange={handleFiles}
-                    disabled={photos.length >= 3}
+                    disabled={photos.length >= 3 || isProcessingPhotos}
                   />
                 </label>
 
@@ -591,6 +703,406 @@ function App() {
       </main>
     </div>
   )
+}
+
+
+function AdminPage() {
+  const [session, setSession] = useState(null)
+  const [checkingSession, setCheckingSession] = useState(true)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session ?? null)
+      setCheckingSession(false)
+    })
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession)
+    })
+    return () => listener.subscription.unsubscribe()
+  }, [])
+
+  if (checkingSession) {
+    return (
+      <div className="admin-shell admin-center">
+        <Loader2 className="spin" size={28} />
+        <p>관리자 정보를 확인하고 있어요.</p>
+      </div>
+    )
+  }
+
+  return session ? <AdminDashboard session={session} /> : <AdminLogin />
+}
+
+function AdminLogin() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const login = async (event) => {
+    event.preventDefault()
+    if (!email.trim() || !password) {
+      setError('이메일과 비밀번호를 입력해주세요.')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    })
+    if (loginError) setError('관리자 로그인에 실패했습니다. 계정 정보를 확인해주세요.')
+    setLoading(false)
+  }
+
+  return (
+    <div className="admin-shell admin-login-wrap">
+      <section className="admin-login-card">
+        <div className="admin-login-icon"><LockKeyhole size={28} /></div>
+        <p className="eyebrow">ADMIN</p>
+        <h1>추가미션 관리자</h1>
+        <p className="admin-muted">승인된 관리자 계정으로 로그인해주세요.</p>
+        <form onSubmit={login} className="admin-login-form">
+          <label className="field-label">
+            <span className="field-title">이메일</span>
+            <input className="text-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+          </label>
+          <label className="field-label">
+            <span className="field-title">비밀번호</span>
+            <input className="text-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+          </label>
+          {error && <ErrorBox message={error} />}
+          <button className="primary-button admin-login-button" disabled={loading}>
+            {loading ? <><Loader2 size={18} className="spin" /> 로그인 중...</> : <><ShieldCheck size={18} /> 관리자 로그인</>}
+          </button>
+        </form>
+        <a href="/" className="admin-back-link">참가자 제출페이지로 돌아가기</a>
+      </section>
+    </div>
+  )
+}
+
+function AdminDashboard({ session }) {
+  const PAGE_SIZE = 10
+  const [missionFilter, setMissionFilter] = useState('all')
+  const [page, setPage] = useState(1)
+  const [records, setRecords] = useState([])
+  const [total, setTotal] = useState(0)
+  const [counts, setCounts] = useState({ all: 0 })
+  const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
+  const [error, setError] = useState('')
+  const [photoViewer, setPhotoViewer] = useState(null)
+
+  const missionMap = useMemo(
+    () => Object.fromEntries(MISSIONS.map((item) => [item.id, item])),
+    [],
+  )
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  const parsePaths = (value) => {
+    if (!value) return []
+    if (Array.isArray(value)) return value
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
+
+  const attachPhotoUrls = async (rows) => {
+    return Promise.all(rows.map(async (row) => {
+      const photoPaths = parsePaths(row.photo_paths)
+      if (!photoPaths.length) return { ...row, photoPaths, photoUrls: [] }
+
+      const { data, error: signedError } = await supabase.storage
+        .from('mission-photos')
+        .createSignedUrls(photoPaths, 60 * 30)
+
+      if (signedError) {
+        console.error('사진 URL 생성 오류:', signedError)
+        return { ...row, photoPaths, photoUrls: [] }
+      }
+
+      return {
+        ...row,
+        photoPaths,
+        photoUrls: (data ?? []).map((item) => item.signedUrl).filter(Boolean),
+      }
+    }))
+  }
+
+  const fetchCounts = async () => {
+    const queries = [
+      supabase.from('submissions').select('*', { count: 'exact', head: true }),
+      ...MISSIONS.map((mission) =>
+        supabase.from('submissions').select('*', { count: 'exact', head: true }).eq('mission_id', mission.id),
+      ),
+    ]
+    const results = await Promise.all(queries)
+    const next = { all: results[0].count ?? 0 }
+    MISSIONS.forEach((mission, index) => {
+      next[mission.id] = results[index + 1].count ?? 0
+    })
+    setCounts(next)
+  }
+
+  const fetchRecords = async () => {
+    setLoading(true)
+    setError('')
+    const from = (page - 1) * PAGE_SIZE
+    const to = from + PAGE_SIZE - 1
+
+    let query = supabase
+      .from('submissions')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, to)
+
+    if (missionFilter !== 'all') query = query.eq('mission_id', Number(missionFilter))
+
+    const { data, count, error: queryError } = await query
+    if (queryError) {
+      console.error('관리자 실적 조회 오류:', queryError)
+      setError('실적자료를 불러오지 못했습니다. 관리자 권한과 RLS 설정을 확인해주세요.')
+      setRecords([])
+      setTotal(0)
+      setLoading(false)
+      return
+    }
+
+    setRecords(await attachPhotoUrls(data ?? []))
+    setTotal(count ?? 0)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchCounts()
+  }, [])
+
+  useEffect(() => {
+    fetchRecords()
+  }, [missionFilter, page])
+
+  const changeMission = (value) => {
+    setMissionFilter(value)
+    setPage(1)
+  }
+
+  const refresh = async () => {
+    await Promise.all([fetchCounts(), fetchRecords()])
+  }
+
+  const fetchAllForExport = async () => {
+    const chunkSize = 1000
+    let from = 0
+    let all = []
+
+    while (true) {
+      let query = supabase
+        .from('submissions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(from, from + chunkSize - 1)
+
+      if (missionFilter !== 'all') query = query.eq('mission_id', Number(missionFilter))
+      const { data, error: exportError } = await query
+      if (exportError) throw exportError
+      all = all.concat(data ?? [])
+      if (!data || data.length < chunkSize) break
+      from += chunkSize
+    }
+    return all
+  }
+
+  const exportExcel = async () => {
+    setExporting(true)
+    setError('')
+    try {
+      const rows = await fetchAllForExport()
+      const excelRows = rows.map((row, index) => {
+        const paths = parsePaths(row.photo_paths)
+        return {
+          순번: index + 1,
+          제출일시: formatDateTime(row.created_at),
+          미션번호: row.mission_id,
+          미션명: missionMap[row.mission_id]?.title ?? '',
+          이름: row.participant_name ?? '',
+          연락처: row.phone ?? '',
+          레벨: row.level ?? '',
+          활동일: row.activity_date ?? '',
+          질문1답변: row.answer_1 ?? '',
+          질문2답변: row.answer_2 ?? '',
+          질문3답변: row.answer_3 ?? '',
+          인증설명: row.comment ?? '',
+          상태: row.status ?? '',
+          사진1경로: paths[0] ?? '',
+          사진2경로: paths[1] ?? '',
+          사진3경로: paths[2] ?? '',
+        }
+      })
+
+      const worksheet = XLSX.utils.json_to_sheet(excelRows)
+      worksheet['!cols'] = [
+        { wch: 7 }, { wch: 20 }, { wch: 9 }, { wch: 24 }, { wch: 12 }, { wch: 16 },
+        { wch: 12 }, { wch: 12 }, { wch: 45 }, { wch: 45 }, { wch: 45 }, { wch: 35 },
+        { wch: 10 }, { wch: 45 }, { wch: 45 }, { wch: 45 },
+      ]
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, '추가미션 실적')
+      const missionName = missionFilter === 'all'
+        ? '전체'
+        : `미션${missionFilter}_${missionMap[Number(missionFilter)]?.title ?? ''}`
+      const date = new Date().toISOString().slice(0, 10)
+      XLSX.writeFile(workbook, `으뜸성장챌린지_추가미션_${missionName}_${date}.xlsx`)
+    } catch (err) {
+      console.error('엑셀 다운로드 오류:', err)
+      setError('엑셀 파일을 만드는 중 오류가 발생했습니다.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const logout = async () => {
+    await supabase.auth.signOut()
+  }
+
+  return (
+    <div className="admin-shell">
+      <header className="admin-header">
+        <div>
+          <p className="eyebrow"><ShieldCheck size={15} /> ADMIN DASHBOARD</p>
+          <h1>추가미션 제출현황</h1>
+          <p className="admin-muted">미션별 최근 제출순으로 10건씩 확인할 수 있습니다.</p>
+        </div>
+        <div className="admin-header-actions">
+          <span className="admin-email">{session.user.email}</span>
+          <button className="ghost-button" onClick={logout}><LogOut size={16} /> 로그아웃</button>
+        </div>
+      </header>
+
+      <main className="admin-main">
+        <section className="admin-stats">
+          <button className={`admin-stat-card ${missionFilter === 'all' ? 'active' : ''}`} onClick={() => changeMission('all')}>
+            <strong>전체</strong><b>{counts.all ?? 0}</b><span>건</span>
+          </button>
+          {MISSIONS.map((mission) => (
+            <button key={mission.id} className={`admin-stat-card ${Number(missionFilter) === mission.id ? 'active' : ''}`} onClick={() => changeMission(String(mission.id))}>
+              <strong>{String(mission.id).padStart(2, '0')}</strong>
+              <b>{counts[mission.id] ?? 0}</b><span>건</span>
+              <small>{mission.title}</small>
+            </button>
+          ))}
+        </section>
+
+        <section className="admin-toolbar">
+          <div>
+            <h2>{missionFilter === 'all' ? '전체 미션' : missionMap[Number(missionFilter)]?.title}</h2>
+            <p>제출일 최신순 · 페이지당 최대 10명</p>
+          </div>
+          <div className="admin-toolbar-actions">
+            <button className="ghost-button" onClick={refresh} disabled={loading}><RefreshCw size={16} className={loading ? 'spin' : ''} /> 새로고침</button>
+            <button className="primary-button" onClick={exportExcel} disabled={exporting}>
+              {exporting ? <><Loader2 size={16} className="spin" /> 엑셀 생성 중</> : <><Download size={16} /> 엑셀 다운로드</>}
+            </button>
+          </div>
+        </section>
+
+        {error && <ErrorBox message={error} />}
+
+        {loading ? (
+          <div className="admin-empty"><Loader2 size={26} className="spin" /><p>제출현황을 불러오는 중입니다.</p></div>
+        ) : records.length === 0 ? (
+          <div className="admin-empty"><Images size={30} /><p>아직 제출된 실적이 없습니다.</p></div>
+        ) : (
+          <div className="admin-record-list">
+            {records.map((record) => (
+              <article className="admin-record-card" key={record.id}>
+                <div className="admin-record-top">
+                  <div className="admin-record-person">
+                    <span className="admin-mission-badge">{String(record.mission_id).padStart(2, '0')}</span>
+                    <div>
+                      <h3>{record.participant_name || '이름 없음'} <span>{record.level || '레벨 미입력'}</span></h3>
+                      <p>{missionMap[record.mission_id]?.title ?? `미션 ${record.mission_id}`}</p>
+                    </div>
+                  </div>
+                  <div className="admin-record-date">
+                    <strong>{formatDateTime(record.created_at)}</strong>
+                    <span>제출</span>
+                  </div>
+                </div>
+
+                <div className="admin-meta-grid">
+                  <div><span>연락처</span><strong>{record.phone || '-'}</strong></div>
+                  <div><span>활동일</span><strong>{record.activity_date || '-'}</strong></div>
+                  <div><span>상태</span><strong>{record.status || '-'}</strong></div>
+                </div>
+
+                <div className="admin-answer-grid">
+                  {[record.answer_1, record.answer_2, record.answer_3].map((answer, index) => (
+                    <div key={index}>
+                      <span>질문 {index + 1}</span>
+                      <p>{answer || '-'}</p>
+                    </div>
+                  ))}
+                  {record.comment && <div><span>인증 설명</span><p>{record.comment}</p></div>}
+                </div>
+
+                <div className="admin-photo-section">
+                  <div className="admin-photo-head"><span>인증사진</span><b>{record.photoUrls.length}장</b></div>
+                  {record.photoUrls.length ? (
+                    <div className="admin-photo-grid">
+                      {record.photoUrls.map((url, index) => (
+                        <button key={url} type="button" onClick={() => setPhotoViewer({ urls: record.photoUrls, index, name: record.participant_name })}>
+                          <img src={url} alt={`${record.participant_name} 인증사진 ${index + 1}`} />
+                          <span><Eye size={15} /> 크게 보기</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : <p className="admin-muted">등록된 사진이 없습니다.</p>}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+
+        <div className="admin-pagination">
+          <button className="ghost-button" disabled={page <= 1 || loading} onClick={() => setPage((prev) => Math.max(1, prev - 1))}><ChevronLeft size={17} /> 이전</button>
+          <span>{page} / {totalPages} 페이지 · 총 {total}건</span>
+          <button className="ghost-button" disabled={page >= totalPages || loading} onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}>다음 <ChevronRight size={17} /></button>
+        </div>
+      </main>
+
+      {photoViewer && (
+        <div className="photo-modal" role="dialog" aria-modal="true" onClick={() => setPhotoViewer(null)}>
+          <div className="photo-modal-card" onClick={(event) => event.stopPropagation()}>
+            <button className="photo-modal-close" onClick={() => setPhotoViewer(null)} aria-label="사진 닫기"><X size={20} /></button>
+            <img src={photoViewer.urls[photoViewer.index]} alt={`${photoViewer.name} 인증사진`} />
+            <div className="photo-modal-nav">
+              <button className="ghost-button" disabled={photoViewer.index <= 0} onClick={() => setPhotoViewer((prev) => ({ ...prev, index: prev.index - 1 }))}><ChevronLeft size={17} /> 이전</button>
+              <span>{photoViewer.index + 1} / {photoViewer.urls.length}</span>
+              <button className="ghost-button" disabled={photoViewer.index >= photoViewer.urls.length - 1} onClick={() => setPhotoViewer((prev) => ({ ...prev, index: prev.index + 1 }))}>다음 <ChevronRight size={17} /></button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function formatDateTime(value) {
+  if (!value) return '-'
+  try {
+    return new Intl.DateTimeFormat('ko-KR', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(new Date(value))
+  } catch {
+    return value
+  }
 }
 
 function Header() {
