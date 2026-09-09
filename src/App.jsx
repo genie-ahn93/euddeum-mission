@@ -340,9 +340,10 @@ function App() {
     <span className="notice-summary-text">
       <strong className="notice-open">🎯 추가미션 OPEN!</strong>
 
-      <span>
-        미션 1개 완료 시 <b>+2점</b>, 최대 5개 참여 시 <b>총 +10점</b>
-      </span>
+   <span className="score-lines">
+  <span>미션 1개 완료 시 <b>+2점</b>,</span>
+  <span>최대 5개 참여 시 <b>총 +10점</b></span>
+</span>
 
       <span>
         추가점수는 기본 활동비 수여 기준 점수에는 포함되지만,
