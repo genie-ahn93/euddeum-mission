@@ -1052,3 +1052,61 @@ input[type="date"].text-input { width:100%; min-width:0; box-sizing:border-box; 
     grid-template-columns: 1fr;
   }
 }
+
+
+/* 관리자 제출내용 초기화 */
+.danger-button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 1px solid #d8a6a0;
+  border-radius: 11px;
+  background: #fff8f6;
+  color: #a44238;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.danger-button:hover:not(:disabled) { background:#fbe9e5; border-color:#c9847b; }
+.danger-button:disabled { opacity:.45; cursor:not-allowed; }
+
+.admin-clear-card {
+  position: relative;
+  width: min(560px, 100%);
+  padding: 26px;
+  border-radius: 20px;
+  background: #fffdf8;
+}
+.admin-clear-heading { display:flex; align-items:center; gap:12px; padding-right:38px; }
+.admin-clear-heading h2 { margin:0 0 4px; color:#7f352e; font-size:22px; }
+.admin-clear-heading p { margin:0; color:#7d8881; font-size:12px; }
+.admin-clear-icon {
+  width:44px; height:44px; display:grid; place-items:center; flex:0 0 auto;
+  border-radius:13px; background:#fbe9e5; color:#a44238;
+}
+.admin-clear-warning {
+  margin:20px 0 16px; padding:15px 16px; border:1px solid #ead0cc;
+  border-radius:13px; background:#fff8f6;
+}
+.admin-clear-warning strong { color:#963e35; }
+.admin-clear-warning p {
+  margin:7px 0 0; color:#795f5b; font-size:12px; line-height:1.65; word-break:keep-all;
+}
+.admin-clear-actions {
+  display:grid; grid-template-columns:1fr 1.25fr; gap:9px; margin-top:16px;
+}
+.admin-clear-actions .ghost-button,
+.admin-clear-actions .danger-button { width:100%; }
+.danger-confirm-button {
+  min-height:46px; background:#a44238; border-color:#a44238; color:white;
+}
+.danger-confirm-button:hover:not(:disabled) { background:#8e362e; border-color:#8e362e; }
+
+@media (max-width:700px) {
+  .admin-toolbar-actions .danger-button { width:100%; }
+  .admin-clear-actions { grid-template-columns:1fr; }
+}
