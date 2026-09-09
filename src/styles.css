@@ -265,3 +265,100 @@ img { max-width: 100%; }
   .external-link { max-width: 125px; font-size: 10px; }
   .hero-title { font-size: 34px; }
 }
+
+/* Expanded mission guide */
+.score-notice {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+}
+.score-notice summary {
+  list-style: none;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 11px;
+  padding: 18px 20px;
+  cursor: pointer;
+  user-select: none;
+}
+.score-notice summary::-webkit-details-marker { display: none; }
+.notice-icon { color: #9c7a24; margin-top: 2px; display: grid; }
+.notice-summary-text {
+  display: grid;
+  gap: 5px;
+  color: #5b655e;
+  font-size: 14px;
+  line-height: 1.65;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+.notice-summary-text b { color: #6c571d; }
+.notice-summary-text strong { color: #8d5523; font-weight: 900; }
+.notice-summary-text .notice-open { color: #1f5b43; font-size: 15px; }
+.notice-more {
+  color: #245742;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+  padding-top: 2px;
+}
+.score-notice[open] .notice-more::after { content: ' 접기'; }
+.score-notice:not([open]) .notice-more::after { content: ''; }
+.notice-detail {
+  border-top: 1px solid rgba(36, 87, 66, .12);
+  padding: 18px 20px 20px 49px;
+  color: #5b655e;
+  font-size: 13px;
+  line-height: 1.75;
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+.notice-detail p { margin: 0 0 14px; }
+.notice-detail strong, .notice-detail b { color: #214c39; }
+.notice-detail .mission-flow { color: #8d5523; }
+.notice-divider { height: 1px; background: rgba(36, 87, 66, .12); margin: 18px 0; }
+.notice-subtitle { font-weight: 900; color: #214c39; font-size: 14px; }
+.notice-example {
+  display: grid;
+  gap: 7px;
+  margin: 12px 0 16px;
+  padding: 14px 15px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(156, 122, 36, .18);
+  word-break: keep-all;
+}
+.notice-closing { margin-bottom: 0 !important; }
+
+/* Never split Korean words in prominent UI text */
+.hero-title,
+.mission-card h3,
+.mission-card p,
+.section-heading h2,
+.section-heading p,
+.selected-mission-strip strong,
+.selected-mission-strip small,
+.field-label,
+.proof-box span,
+.upload-drop span,
+.external-link {
+  word-break: keep-all;
+  overflow-wrap: normal;
+}
+
+@media (max-width: 640px) {
+  .score-notice summary {
+    grid-template-columns: auto 1fr;
+    padding: 15px;
+  }
+  .notice-more {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: 3px;
+  }
+  .notice-detail { padding: 16px 15px 18px; }
+  .notice-summary-text { font-size: 13px; line-height: 1.6; }
+  .hero-title .mobile-title { display: inline; }
+  .hero-title .desktop-title { display: none; }
+}
