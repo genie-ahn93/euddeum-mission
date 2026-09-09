@@ -321,38 +321,33 @@ function App() {
         <aside className="intro-panel">
           <div>
             <p className="eyebrow"><Sparkles size={15} /> EXTRA MISSION</p>
-<h1 className="hero-title">
-  <span className="desktop-title">
-    시흥시<br />
-    으뜸성장챌린지<br />
-    추가미션
-  </span>
-
-  <span className="mobile-title">
-    시흥시<br />
-    으뜸성장챌린지<br />
-    추가미션
-  </span>
-</h1>
-
-<details className="score-notice" open={false}>
-  <summary>
-    <span className="notice-summary-text">
-      <strong className="notice-open">🎯 추가미션 OPEN!</strong>
-
-   <span className="score-lines">
-  <span>미션 1개 완료 시 <b>+2점</b>,</span>
-  <span>최대 5개 참여 시 <b>총 +10점</b></span>
-</span>
-
-      <span>
-        추가점수는 기본 활동비 수여 기준 점수에는 포함되지만,
-        <strong> 1~2위 상위 활동비 순위 산정에는 반영되지 않습니다.</strong>
-      </span>
-    </span>
-
-    <span className="notice-more">자세히 보기</span>
-  </summary>
+            <h1 className="hero-title">
+              <span className="desktop-title">
+                시흥시<br />
+                으뜸성장챌린지<br />
+                추가미션
+              </span>
+              <span className="mobile-title">
+                시흥시<br />
+                으뜸성장챌린지<br />
+                추가미션
+              </span>
+            </h1>
+            <details className="score-notice" open={false}>
+              <summary>
+                <span className="notice-summary-text">
+                  <strong className="notice-open">🎯 추가미션 OPEN!</strong>
+                  <span className="score-lines">
+                    <span>미션 1개 완료 시 <b>+2점</b>,</span>
+                    <span>최대 5개 참여 시 <b>총 +10점</b></span>
+                  </span>
+                  <span>
+                    추가점수는 기본 활동비 수여 기준 점수에는 포함되지만,
+                    <strong> 1~2위 상위 활동비 순위 산정에는 반영되지 않습니다.</strong>
+                  </span>
+                </span>
+                <span className="notice-more">자세히 보기</span>
+              </summary>
 
               <div className="notice-detail">
                 <p><strong>으뜸성장챌린지, 아직 끝난 거 아니죠? 😎</strong><br />지속적인 참여를 응원하기 위한 <b>추가미션</b>이 열렸습니다!</p>
@@ -440,7 +435,7 @@ function App() {
               </div>
 
               <label className="field-label">
-                이름 <em>*</em>
+                <span className="field-title">이름 <em>*</em></span>
                 <input
                   className="text-input"
                   value={form.name}
@@ -451,7 +446,7 @@ function App() {
               </label>
 
               <label className="field-label">
-                연락처 <em>*</em>
+                <span className="field-title">연락처 <em>*</em></span>
                 <input
                   className="text-input"
                   value={form.phone}
@@ -488,7 +483,7 @@ function App() {
               </div>
 
               <label className="field-label">
-                활동일 <em>*</em>
+                <span className="field-title">활동일 <em>*</em></span>
                 <input
                   type="date"
                   className="text-input"
@@ -500,7 +495,11 @@ function App() {
               <div className="questions-stack">
                 {mission.questions.map((question, index) => (
                   <label className="field-label" key={question}>
-                    <span className="question-number">Q{index + 1}</span> {question} <em>*</em>
+                    <span className="field-title question-title">
+                      <span className="question-number">Q{index + 1}</span>
+                      <span>{question}</span>
+                      <em>*</em>
+                    </span>
                     <textarea
                       className="text-area"
                       rows={3}
@@ -520,7 +519,9 @@ function App() {
               <div className="upload-section">
                 <div className="upload-head">
                   <div>
-                    <strong>인증사진 {mission.id === 8 ? '' : '*'}</strong>
+                    <strong className="field-title upload-title">
+                      인증사진 {mission.id === 8 ? null : <em>*</em>}
+                    </strong>
                     <span>JPG · JPEG · PNG · WEBP / 장당 최대 10MB / 최대 3장</span>
                   </div>
                   <span>{photos.length}/3</span>
@@ -555,7 +556,7 @@ function App() {
 
               {mission.id === 8 && photos.length === 0 && (
                 <label className="field-label">
-                  인증 설명 <em>*</em>
+                  <span className="field-title">인증 설명 <em>*</em></span>
                   <textarea
                     className="text-area"
                     rows={4}
