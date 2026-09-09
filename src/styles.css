@@ -829,3 +829,77 @@ img { max-width: 100%; }
   .check-result-row { grid-template-columns:auto minmax(0,1fr); }
   .check-status { grid-column:2; justify-self:start; }
 }
+
+
+/* ===== 모바일 정렬 보정 ===== */
+
+/* STEP 2: select(참여 레벨)도 일반 입력칸과 같은 높이 */
+.select-input {
+  min-height: 56px;
+  height: 56px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* 제출완료 화면: 두 버튼 크기/정렬 통일 */
+.success-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 430px;
+  margin: 0 auto;
+}
+
+.success-actions .success-button,
+.success-actions .success-link {
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  height: 52px;
+  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  /* 모바일에서는 입력칸과 레벨 선택칸 높이를 동일하게 */
+  .text-input,
+  .select-input {
+    min-height: 54px;
+    height: 54px;
+    box-sizing: border-box;
+  }
+
+  .select-input {
+    padding-left: 16px;
+    padding-right: 42px;
+    font-size: inherit;
+  }
+
+  /* 완료 화면 버튼도 같은 너비/높이로 나란히 */
+  .success-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    max-width: 100%;
+  }
+
+  .success-actions .success-button,
+  .success-actions .success-link {
+    min-height: 50px;
+    height: 50px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 390px) {
+  /* 아주 좁은 화면에서는 버튼을 세로로 쌓아 찌그러짐 방지 */
+  .success-actions {
+    grid-template-columns: 1fr;
+  }
+}
