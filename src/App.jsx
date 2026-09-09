@@ -326,13 +326,39 @@ function App() {
               <span className="desktop-title">시흥시으뜸성장챌린지<br />추가미션</span>
               <span className="mobile-title">시흥시<br />으뜸성장챌린지<br />추가미션</span>
             </h1>
-            <div className="score-notice">
-              <Info size={18} />
-              <p>
-                추가점수는 기본 활동비 수여 기준 충족 점수에는 포함되나,
-                <strong> 1~2위 상위 활동비 순위 산정에는 반영되지 않습니다.</strong>
-              </p>
-            </div>
+            <details className="score-notice" open={false}>
+              <summary>
+                <span className="notice-icon"><Info size={18} /></span>
+                <span className="notice-summary-text">
+                  <strong className="notice-open">🎯 추가미션 OPEN!</strong>
+                  <span>미션 1개 완료 시 <b>+2점</b>, 최대 5개 참여 시 <b>총 +10점</b></span>
+                  <span>추가점수는 기본 활동비 수여 기준 점수에는 포함되지만, <strong>1~2위 상위 활동비 순위 산정에는 반영되지 않습니다.</strong></span>
+                </span>
+                <span className="notice-more">자세히 보기</span>
+              </summary>
+
+              <div className="notice-detail">
+                <p><strong>으뜸성장챌린지, 아직 끝난 거 아니죠? 😎</strong><br />지속적인 참여를 응원하기 위한 <b>추가미션</b>이 열렸습니다!</p>
+                <p>일상 속에서 내가 할 수 있는 작은 도전을 직접 고르고, 하나씩 실천하며 <strong>나만의 성장경험을 더 채워보세요! 🌱</strong></p>
+                <p>미션 1개를 완료할 때마다 <strong>+2점!</strong><br />최대 5개까지 참여하면 <strong>총 +10점</strong>을 받을 수 있어요. 🙌</p>
+                <p className="mission-flow"><strong>도전하고 → 인증하고 → 성장점수까지 GET!</strong></p>
+
+                <div className="notice-divider" />
+                <p className="notice-subtitle">💡 추가점수는 이렇게 적용돼요!</p>
+                <p>추가미션 점수는 <strong>기본 활동비 수여 기준을 충족하기 위한 점수에는 포함</strong>됩니다.</p>
+                <p>다만, <strong>점수 순위에 따라 지급되는 상위 활동비 산정에는 포함되지 않아요!</strong></p>
+
+                <div className="notice-example">
+                  <strong>예시 👀</strong>
+                  <span>기존 활동점수 <b>55점</b> + 추가미션 <b>10점</b> = 총 <b>65점</b></span>
+                  <span>✅ 기본 활동비 <b>10만원 수여 가능!</b></span>
+                  <span>❌ 1~2위 순위 산정 시에는 추가미션 점수를 제외한 <b>기존 활동점수 55점</b>을 기준으로 합니다.</span>
+                </div>
+
+                <p>따라서 추가미션 점수를 포함해 1~2위가 되더라도 <strong>1위 40만원 / 2위 30만원의 상위 활동비 대상에는 해당되지 않습니다.</strong></p>
+                <p className="notice-closing">✨ 작은 도전도 쌓이면 멋진 성장기록이 됩니다.<br /><strong>내가 고른 미션으로 으뜸성장챌린지를 끝까지 완주해보세요!</strong></p>
+              </div>
+            </details>
           </div>
           <div className="intro-footnote">
             작은 도전을 선택하고, 기록하고, 인증해보세요.
