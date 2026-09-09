@@ -129,7 +129,7 @@ const LEVELS = ['골드', '플래티넘', '마스터', '드림']
 
 const INITIAL_FORM = {
   name: '',
-  phone: '',
+  birthDate: '',
   level: '',
   checkCode: '',
   activityDate: new Date().toISOString().slice(0, 10),
@@ -138,12 +138,6 @@ const INITIAL_FORM = {
   consent: false,
 }
 
-function formatPhone(value) {
-  const digits = value.replace(/\D/g, '').slice(0, 11)
-  if (digits.length <= 3) return digits
-  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`
-}
 
 function safeFileName(name) {
   const cleaned = name.normalize('NFKC').replace(/[^a-zA-Z0-9._-]/g, '_')
@@ -210,15 +204,22 @@ async function compressImage(file) {
 }
 
 
-async function makeVerificationHash(name, phone, level, checkCode) {
-  const normalizedName = name.trim().replace(/\s+/g, ' ')
-  const normalizedPhone = phone.replace(/\D/g, '')
-  const raw = `${normalizedName}|${normalizedPhone}|${level}|${checkCode}`
+async function sha256Text(raw) {
   const encoded = new TextEncoder().encode(raw)
   const digest = await crypto.subtle.digest('SHA-256', encoded)
   return Array.from(new Uint8Array(digest))
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('')
+}
+
+async function makeParticipantKey(name, birthDate, level) {
+  const normalizedName = name.trim().replace(/\s+/g, ' ')
+  return sha256Text(`${normalizedName}|${birthDate}|${level}`)
+}
+
+async function makeVerificationHash(name, birthDate, level, checkCode) {
+  const normalizedName = name.trim().replace(/\s+/g, ' ')
+  return sha256Text(`${normalizedName}|${birthDate}|${level}|${checkCode}`)
 }
 
 function App() {
@@ -239,6 +240,7 @@ function MissionSubmitPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [showIdentityConfirm, setShowIdentityConfirm] = useState(false)
 
   const mission = useMemo(
     () => MISSIONS.find((item) => item.id === selectedMissionId) ?? null,
@@ -279,8 +281,8 @@ function MissionSubmitPage() {
       setError('이름을 입력해주세요.')
       return
     }
-    if (!/^010-\d{4}-\d{4}$/.test(form.phone)) {
-      setError('연락처를 010-0000-0000 형식으로 입력해주세요.')
+    if (!form.birthDate) {
+      setError('생년월일을 입력해주세요.')
       return
     }
     if (!LEVELS.includes(form.level)) {
@@ -292,6 +294,11 @@ function MissionSubmitPage() {
       return
     }
     setError('')
+    setShowIdentityConfirm(true)
+  }
+
+  const confirmIdentity = () => {
+    setShowIdentityConfirm(false)
     setStep(3)
   }
 
@@ -369,6 +376,35 @@ function MissionSubmitPage() {
     setError('')
 
     try {
+      const participantKey = await makeParticipantKey(
+        form.name,
+        form.birthDate,
+        form.level,
+      )
+
+      // 사진을 올리기 전에 동일 참가자 + 동일 미션 중복 여부를 먼저 확인합니다.
+      const { data: duplicate, error: duplicateCheckError } = await supabase.rpc(
+        'check_duplicate_submission',
+        {
+          p_participant_key: participantKey,
+          p_mission_id: mission.id,
+        },
+      )
+
+      if (duplicateCheckError) throw duplicateCheckError
+
+      if (duplicate === true) {
+        setError('이미 제출한 미션입니다. 같은 미션은 중복 제출할 수 없어요.')
+        return
+      }
+
+      const verificationHash = await makeVerificationHash(
+        form.name,
+        form.birthDate,
+        form.level,
+        form.checkCode,
+      )
+
       const uploadedPaths = []
 
       for (const file of photos) {
@@ -385,17 +421,11 @@ function MissionSubmitPage() {
         uploadedPaths.push(path)
       }
 
-      const verificationHash = await makeVerificationHash(
-        form.name,
-        form.phone,
-        form.level,
-        form.checkCode,
-      )
-
       const { error: insertError } = await supabase.from('submissions').insert({
         participant_name: form.name.trim(),
-        phone: form.phone,
+        birth_date: form.birthDate,
         level: form.level,
+        participant_key: participantKey,
         verification_hash: verificationHash,
         mission_id: mission.id,
         activity_date: form.activityDate,
@@ -411,7 +441,15 @@ function MissionSubmitPage() {
       setSubmitted(true)
     } catch (err) {
       console.error('추가미션 제출 오류:', err)
-      setError('제출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+
+      const message = String(err?.message ?? '')
+      if (message.includes('DUPLICATE_MISSION') || err?.code === '23505') {
+        setError('이미 제출한 미션입니다. 같은 미션은 중복 제출할 수 없어요.')
+      } else if (message.toLowerCase().includes('payload') || message.toLowerCase().includes('file size')) {
+        setError('사진 용량이 너무 큽니다. 다른 사진으로 다시 시도해주세요.')
+      } else {
+        setError('제출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -424,6 +462,7 @@ function MissionSubmitPage() {
     setPhotos([])
     setError('')
     setSubmitted(false)
+    setShowIdentityConfirm(false)
   }
 
   if (submitted) {
@@ -436,6 +475,13 @@ function MissionSubmitPage() {
             <p className="eyebrow">MISSION COMPLETE</p>
             <h1>추가미션 인증이 접수되었습니다!</h1>
             <p>담당자 확인 후 점수에 반영됩니다.</p>
+
+            <div className="success-code-box">
+              <span>내 제출확인 번호</span>
+              <strong>{form.checkCode}</strong>
+              <p>제출현황 확인에 필요해요. 같은 번호를 계속 사용하고, 이 화면을 캡처해두는 것을 권장합니다.</p>
+            </div>
+
             <div className="success-actions">
               <button className="primary-button success-button" onClick={resetAll}>
                 다른 미션 도전하기 <ArrowRight size={18} />
@@ -582,15 +628,15 @@ function MissionSubmitPage() {
               </label>
 
               <label className="field-label">
-                <span className="field-title">연락처 <em>*</em></span>
+                <span className="field-title">생년월일 <em>*</em></span>
                 <input
                   className="text-input"
-                  value={form.phone}
-                  onChange={(e) => setField('phone', formatPhone(e.target.value))}
-                  placeholder="010-0000-0000"
-                  inputMode="numeric"
-                  autoComplete="tel"
+                  type="date"
+                  value={form.birthDate}
+                  onChange={(e) => setField('birthDate', e.target.value)}
+                  aria-label="생년월일"
                 />
+                <small className="field-help">기존 으뜸성장챌린지 참여자 확인을 위해 사용됩니다.</small>
               </label>
 
               <label className="field-label">
@@ -618,8 +664,9 @@ function MissionSubmitPage() {
                   autoComplete="off"
                   maxLength={6}
                 />
-                <small className="field-help">
-                  제출현황을 확인할 때 사용하는 번호예요. 다른 미션을 제출할 때도 같은 번호를 사용해주세요.
+                <small className="field-help field-help-important">
+                  이미 추가미션을 제출한 적이 있다면 <strong>이전에 사용한 것과 같은 번호</strong>를 입력해주세요.
+                  제출현황 확인에 필요하니 꼭 기억해주세요.
                 </small>
               </label>
 
@@ -631,6 +678,32 @@ function MissionSubmitPage() {
                 <button className="primary-button" onClick={goToStep3}>
                   다음 <ArrowRight size={18} />
                 </button>
+              </div>
+            </div>
+          )}
+
+          {showIdentityConfirm && (
+            <div className="identity-confirm-modal" role="dialog" aria-modal="true" onClick={() => setShowIdentityConfirm(false)}>
+              <div className="identity-confirm-card" onClick={(event) => event.stopPropagation()}>
+                <button className="photo-modal-close" onClick={() => setShowIdentityConfirm(false)} aria-label="닫기"><X size={20} /></button>
+                <div className="identity-confirm-icon"><ShieldCheck size={24} /></div>
+                <h3>참가자 정보가 맞나요?</h3>
+                <p>생년월일이 잘못 입력되면 기존 참여자 확인과 제출현황 조회가 어려울 수 있어요.</p>
+
+                <div className="identity-confirm-grid">
+                  <div><span>이름</span><strong>{form.name.trim()}</strong></div>
+                  <div><span>생년월일</span><strong>{form.birthDate}</strong></div>
+                  <div><span>참여 레벨</span><strong>{form.level}</strong></div>
+                </div>
+
+                <div className="identity-confirm-actions">
+                  <button className="ghost-button" type="button" onClick={() => setShowIdentityConfirm(false)}>
+                    다시 확인하기
+                  </button>
+                  <button className="primary-button" type="button" onClick={confirmIdentity}>
+                    맞아요, 계속하기 <ArrowRight size={17} />
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -739,7 +812,9 @@ function MissionSubmitPage() {
                   checked={form.consent}
                   onChange={(e) => setField('consent', e.target.checked)}
                 />
-                <span>제출한 개인정보와 인증자료가 추가미션 확인 및 점수 반영을 위해 사용되는 것에 동의합니다. <em>*</em></span>
+                <span>
+                  이름·생년월일·레벨 및 인증자료가 참여자 확인, 추가미션 심사 및 점수 반영을 위해 사용되는 것에 동의합니다. <em>*</em>
+                </span>
               </label>
 
               {error && <ErrorBox message={error} />}
@@ -792,7 +867,7 @@ function LandingPage() {
         </section>
 
         <p className="home-note">
-          제출확인 시 이름, 연락처, 레벨과 직접 설정한 6자리 제출확인 번호가 필요합니다.
+          제출확인 시 이름, 생년월일, 레벨과 직접 설정한 6자리 제출확인 번호가 필요합니다.
         </p>
       </main>
     </div>
@@ -800,7 +875,7 @@ function LandingPage() {
 }
 
 function SubmissionCheckPage() {
-  const [form, setForm] = useState({ name: '', phone: '', level: '', checkCode: '' })
+  const [form, setForm] = useState({ name: '', birthDate: '', level: '', checkCode: '' })
   const [results, setResults] = useState([])
   const [searched, setSearched] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -817,13 +892,13 @@ function SubmissionCheckPage() {
     setSearched(false)
 
     if (!form.name.trim()) return setError('이름을 입력해주세요.')
-    if (!/^010-\d{4}-\d{4}$/.test(form.phone)) return setError('연락처를 010-0000-0000 형식으로 입력해주세요.')
+    if (!form.birthDate) return setError('생년월일을 입력해주세요.')
     if (!LEVELS.includes(form.level)) return setError('참여 레벨을 선택해주세요.')
     if (!/^\d{6}$/.test(form.checkCode)) return setError('제출확인 번호 6자리를 입력해주세요.')
 
     setLoading(true)
     try {
-      const verificationHash = await makeVerificationHash(form.name, form.phone, form.level, form.checkCode)
+      const verificationHash = await makeVerificationHash(form.name, form.birthDate, form.level, form.checkCode)
       const { data, error: lookupError } = await supabase.rpc('lookup_my_submissions', {
         p_hash: verificationHash,
       })
@@ -857,8 +932,8 @@ function SubmissionCheckPage() {
               </label>
 
               <label className="field-label">
-                <span className="field-title">연락처 <em>*</em></span>
-                <input className="text-input" value={form.phone} onChange={(e) => setField('phone', formatPhone(e.target.value))} placeholder="010-0000-0000" inputMode="numeric" />
+                <span className="field-title">생년월일 <em>*</em></span>
+                <input className="text-input" type="date" value={form.birthDate} onChange={(e) => setField('birthDate', e.target.value)} aria-label="생년월일" />
               </label>
 
               <label className="field-label">
@@ -1024,6 +1099,10 @@ function AdminDashboard({ session }) {
   const [photoViewer, setPhotoViewer] = useState(null)
   const [detailRecord, setDetailRecord] = useState(null)
   const [updatingStatusId, setUpdatingStatusId] = useState(null)
+  const [resetTarget, setResetTarget] = useState(null)
+  const [resetCode, setResetCode] = useState('')
+  const [resettingCode, setResettingCode] = useState(false)
+  const [issuedCode, setIssuedCode] = useState('')
 
   const missionMap = useMemo(
     () => Object.fromEntries(MISSIONS.map((item) => [item.id, item])),
@@ -1161,7 +1240,7 @@ function AdminDashboard({ session }) {
           미션번호: row.mission_id,
           미션명: missionMap[row.mission_id]?.title ?? '',
           이름: row.participant_name ?? '',
-          연락처: row.phone ?? '',
+          생년월일: row.birth_date ?? '',
           레벨: row.level ?? '',
           활동일: row.activity_date ?? '',
           질문1답변: row.answer_1 ?? '',
@@ -1193,6 +1272,70 @@ function AdminDashboard({ session }) {
       setError('엑셀 파일을 만드는 중 오류가 발생했습니다.')
     } finally {
       setExporting(false)
+    }
+  }
+
+  const openResetCode = (record) => {
+    setResetTarget(record)
+    setResetCode('')
+    setIssuedCode('')
+    setError('')
+  }
+
+  const generateResetCode = () => {
+    const code = String(Math.floor(100000 + Math.random() * 900000))
+    setResetCode(code)
+    setIssuedCode('')
+  }
+
+  const resetParticipantCode = async () => {
+    if (!resetTarget) return
+    if (!/^\d{6}$/.test(resetCode)) {
+      setError('새 확인번호를 숫자 6자리로 입력해주세요.')
+      return
+    }
+    if (!resetTarget.birth_date || !resetTarget.level || !resetTarget.participant_name) {
+      setError('생년월일·레벨 정보가 없는 기존 제출건은 확인번호를 재설정할 수 없습니다.')
+      return
+    }
+
+    setResettingCode(true)
+    setError('')
+
+    try {
+      const participantKey = resetTarget.participant_key || await makeParticipantKey(
+        resetTarget.participant_name,
+        resetTarget.birth_date,
+        resetTarget.level,
+      )
+      const newVerificationHash = await makeVerificationHash(
+        resetTarget.participant_name,
+        resetTarget.birth_date,
+        resetTarget.level,
+        resetCode,
+      )
+
+      const { error: resetError } = await supabase
+        .from('submissions')
+        .update({
+          participant_key: participantKey,
+          verification_hash: newVerificationHash,
+        })
+        .eq('participant_key', participantKey)
+
+      if (resetError) throw resetError
+
+      setRecords((prev) => prev.map((item) =>
+        item.participant_key === participantKey
+          ? { ...item, participant_key: participantKey, verification_hash: newVerificationHash }
+          : item
+      ))
+      setIssuedCode(resetCode)
+    } catch (err) {
+      console.error('확인번호 재설정 오류:', err)
+      setError('확인번호를 재설정하지 못했습니다. 잠시 후 다시 시도해주세요.')
+    } finally {
+      setResettingCode(false)
     }
   }
 
@@ -1300,11 +1443,12 @@ function AdminDashboard({ session }) {
                   <th>미션</th>
                   <th>이름</th>
                   <th>레벨</th>
-                  <th>연락처</th>
+                  <th>생년월일</th>
                   <th>활동일</th>
                   <th>상태</th>
                   <th>인증사진</th>
                   <th>내용</th>
+                  <th>확인번호</th>
                 </tr>
               </thead>
               <tbody>
@@ -1323,7 +1467,7 @@ function AdminDashboard({ session }) {
                         {record.level || '미입력'}
                       </span>
                     </td>
-                    <td className="admin-nowrap">{record.phone || '-'}</td>
+                    <td className="admin-nowrap">{record.birth_date || '-'}</td>
                     <td className="admin-nowrap">{record.activity_date || '-'}</td>
                     <td>
                       <select
@@ -1360,6 +1504,16 @@ function AdminDashboard({ session }) {
                         상세보기
                       </button>
                     </td>
+                    <td>
+                      <button
+                        className="admin-reset-button"
+                        type="button"
+                        onClick={() => openResetCode(record)}
+                        disabled={!record.birth_date || !record.level}
+                      >
+                        <RefreshCw size={14} /> 재설정
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1373,6 +1527,50 @@ function AdminDashboard({ session }) {
           <button className="ghost-button" disabled={page >= totalPages || loading} onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}>다음 <ChevronRight size={17} /></button>
         </div>
       </main>
+
+      {resetTarget && (
+        <div className="admin-detail-modal" role="dialog" aria-modal="true" onClick={() => setResetTarget(null)}>
+          <div className="admin-reset-card" onClick={(event) => event.stopPropagation()}>
+            <button className="photo-modal-close" onClick={() => setResetTarget(null)} aria-label="닫기"><X size={20} /></button>
+
+            <div className="admin-reset-heading">
+              <span className="admin-reset-icon"><KeyRound size={21} /></span>
+              <div>
+                <h2>제출확인 번호 재설정</h2>
+                <p>{resetTarget.participant_name} · {resetTarget.birth_date || '생년월일 미입력'} · {resetTarget.level || '레벨 미입력'}</p>
+              </div>
+            </div>
+
+            {issuedCode ? (
+              <div className="issued-code-box">
+                <span>새 제출확인 번호</span>
+                <strong>{issuedCode}</strong>
+                <p>이 번호를 참가자에게 전달해주세요. 창을 닫으면 다시 확인할 수 없습니다.</p>
+              </div>
+            ) : (
+              <>
+                <p className="admin-reset-guide">
+                  이 참가자가 제출한 모든 미션의 확인번호가 새 번호로 변경됩니다. 기존 번호는 더 이상 사용할 수 없습니다.
+                </p>
+                <div className="reset-code-row">
+                  <input
+                    className="text-input"
+                    value={resetCode}
+                    onChange={(e) => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="새 숫자 6자리"
+                    inputMode="numeric"
+                    maxLength={6}
+                  />
+                  <button className="ghost-button" type="button" onClick={generateResetCode}>자동 생성</button>
+                </div>
+                <button className="primary-button reset-confirm-button" type="button" onClick={resetParticipantCode} disabled={resettingCode}>
+                  {resettingCode ? <><Loader2 size={17} className="spin" /> 변경 중...</> : <><RefreshCw size={17} /> 새 번호로 변경</>}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {detailRecord && (
         <div className="admin-detail-modal" role="dialog" aria-modal="true" onClick={() => setDetailRecord(null)}>
@@ -1389,7 +1587,7 @@ function AdminDashboard({ session }) {
 
             <div className="admin-detail-meta">
               <div><span>제출일시</span><strong>{formatDateTime(detailRecord.created_at)}</strong></div>
-              <div><span>연락처</span><strong>{detailRecord.phone || '-'}</strong></div>
+              <div><span>생년월일</span><strong>{detailRecord.birth_date || '-'}</strong></div>
               <div><span>활동일</span><strong>{detailRecord.activity_date || '-'}</strong></div>
               <div>
                 <span>상태</span>
@@ -1403,6 +1601,13 @@ function AdminDashboard({ session }) {
                   <option value="확인">확인</option>
                 </select>
               </div>
+            </div>
+
+            <div className="admin-detail-tools">
+              <button className="admin-reset-button" type="button" onClick={() => openResetCode(detailRecord)}>
+                <RefreshCw size={14} /> 확인번호 재설정
+              </button>
+              <small>기존 확인번호는 표시하지 않습니다. 필요할 때 새 번호로 재설정할 수 있습니다.</small>
             </div>
 
             <div className="admin-detail-answers">
