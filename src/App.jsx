@@ -18,6 +18,10 @@ import {
   LogOut,
   RefreshCw,
   ShieldCheck,
+  ClipboardCheck,
+  Search,
+  Play,
+  KeyRound,
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { supabase } from './supabase'
@@ -127,6 +131,7 @@ const INITIAL_FORM = {
   name: '',
   phone: '',
   level: '',
+  checkCode: '',
   activityDate: new Date().toISOString().slice(0, 10),
   answers: ['', '', ''],
   explanation: '',
@@ -204,11 +209,27 @@ async function compressImage(file) {
   }
 }
 
-function App() {
-  if (window.location.pathname.startsWith('/admin')) {
-    return <AdminPage />
-  }
 
+async function makeVerificationHash(name, phone, level, checkCode) {
+  const normalizedName = name.trim().replace(/\s+/g, ' ')
+  const normalizedPhone = phone.replace(/\D/g, '')
+  const raw = `${normalizedName}|${normalizedPhone}|${level}|${checkCode}`
+  const encoded = new TextEncoder().encode(raw)
+  const digest = await crypto.subtle.digest('SHA-256', encoded)
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+function App() {
+  const path = window.location.pathname
+  if (path.startsWith('/admin')) return <AdminPage />
+  if (path.startsWith('/check')) return <SubmissionCheckPage />
+  if (path.startsWith('/submit')) return <MissionSubmitPage />
+  return <LandingPage />
+}
+
+function MissionSubmitPage() {
   const [step, setStep] = useState(1)
   const [selectedMissionId, setSelectedMissionId] = useState(null)
   const [form, setForm] = useState(INITIAL_FORM)
@@ -264,6 +285,10 @@ function App() {
     }
     if (!LEVELS.includes(form.level)) {
       setError('참여 레벨을 선택해주세요.')
+      return
+    }
+    if (!/^\d{6}$/.test(form.checkCode)) {
+      setError('제출확인 번호를 숫자 6자리로 입력해주세요.')
       return
     }
     setError('')
@@ -360,10 +385,18 @@ function App() {
         uploadedPaths.push(path)
       }
 
+      const verificationHash = await makeVerificationHash(
+        form.name,
+        form.phone,
+        form.level,
+        form.checkCode,
+      )
+
       const { error: insertError } = await supabase.from('submissions').insert({
         participant_name: form.name.trim(),
         phone: form.phone,
         level: form.level,
+        verification_hash: verificationHash,
         mission_id: mission.id,
         activity_date: form.activityDate,
         answer_1: form.answers[0].trim(),
@@ -403,9 +436,14 @@ function App() {
             <p className="eyebrow">MISSION COMPLETE</p>
             <h1>추가미션 인증이 접수되었습니다!</h1>
             <p>담당자 확인 후 점수에 반영됩니다.</p>
-            <button className="primary-button success-button" onClick={resetAll}>
-              다른 미션 도전하기 <ArrowRight size={18} />
-            </button>
+            <div className="success-actions">
+              <button className="primary-button success-button" onClick={resetAll}>
+                다른 미션 도전하기 <ArrowRight size={18} />
+              </button>
+              <a className="ghost-button success-link" href="/check">
+                제출 확인하기 <ClipboardCheck size={18} />
+              </a>
+            </div>
           </section>
         </main>
       </div>
@@ -569,6 +607,22 @@ function App() {
                 </select>
               </label>
 
+              <label className="field-label">
+                <span className="field-title">제출확인 번호 <em>*</em></span>
+                <input
+                  className="text-input"
+                  value={form.checkCode}
+                  onChange={(e) => setField('checkCode', e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="숫자 6자리를 정해주세요"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={6}
+                />
+                <small className="field-help">
+                  제출현황을 확인할 때 사용하는 번호예요. 다른 미션을 제출할 때도 같은 번호를 사용해주세요.
+                </small>
+              </label>
+
               {error && <ErrorBox message={error} />}
               <div className="action-row split">
                 <button className="ghost-button" onClick={() => { setStep(1); setError('') }}>
@@ -706,6 +760,180 @@ function App() {
 }
 
 
+function LandingPage() {
+  return (
+    <div className="site-shell">
+      <Header />
+      <main className="home-page">
+        <section className="home-hero">
+          <p className="eyebrow"><Sparkles size={15} /> EXTRA MISSION</p>
+          <h1>시흥시<br />으뜸성장챌린지<br />추가미션</h1>
+          <p>도전하고, 기록하고, 내가 제출한 미션의 확인상태까지 한곳에서 확인해보세요.</p>
+        </section>
+
+        <section className="home-actions">
+          <a className="home-action-card primary" href="/submit">
+            <span className="home-action-icon"><Play size={27} /></span>
+            <div>
+              <strong>미션하러 가기</strong>
+              <p>8개의 추가미션 중 하나를 선택해 도전하고 인증해요.</p>
+            </div>
+            <ArrowRight size={22} />
+          </a>
+
+          <a className="home-action-card" href="/check">
+            <span className="home-action-icon"><ClipboardCheck size={27} /></span>
+            <div>
+              <strong>제출 확인하기</strong>
+              <p>내가 제출한 미션과 담당자 확인상태를 확인해요.</p>
+            </div>
+            <ArrowRight size={22} />
+          </a>
+        </section>
+
+        <p className="home-note">
+          제출확인 시 이름, 연락처, 레벨과 직접 설정한 6자리 제출확인 번호가 필요합니다.
+        </p>
+      </main>
+    </div>
+  )
+}
+
+function SubmissionCheckPage() {
+  const [form, setForm] = useState({ name: '', phone: '', level: '', checkCode: '' })
+  const [results, setResults] = useState([])
+  const [searched, setSearched] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const setField = (key, value) => {
+    setForm((prev) => ({ ...prev, [key]: value }))
+    setError('')
+  }
+
+  const lookup = async (event) => {
+    event.preventDefault()
+    setError('')
+    setSearched(false)
+
+    if (!form.name.trim()) return setError('이름을 입력해주세요.')
+    if (!/^010-\d{4}-\d{4}$/.test(form.phone)) return setError('연락처를 010-0000-0000 형식으로 입력해주세요.')
+    if (!LEVELS.includes(form.level)) return setError('참여 레벨을 선택해주세요.')
+    if (!/^\d{6}$/.test(form.checkCode)) return setError('제출확인 번호 6자리를 입력해주세요.')
+
+    setLoading(true)
+    try {
+      const verificationHash = await makeVerificationHash(form.name, form.phone, form.level, form.checkCode)
+      const { data, error: lookupError } = await supabase.rpc('lookup_my_submissions', {
+        p_hash: verificationHash,
+      })
+      if (lookupError) throw lookupError
+      setResults(data ?? [])
+      setSearched(true)
+    } catch (err) {
+      console.error('제출현황 확인 오류:', err)
+      setError('제출현황을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="site-shell">
+      <Header />
+      <main className="check-page">
+        <section className="check-card">
+          <div className="check-heading">
+            <p className="eyebrow"><ClipboardCheck size={15} /> SUBMISSION CHECK</p>
+            <h1>내 미션 제출현황 확인</h1>
+            <p>제출할 때 입력한 정보와 제출확인 번호를 입력해주세요.</p>
+          </div>
+
+          <form className="check-form" onSubmit={lookup}>
+            <div className="check-form-grid">
+              <label className="field-label">
+                <span className="field-title">이름 <em>*</em></span>
+                <input className="text-input" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="이름을 입력해주세요" />
+              </label>
+
+              <label className="field-label">
+                <span className="field-title">연락처 <em>*</em></span>
+                <input className="text-input" value={form.phone} onChange={(e) => setField('phone', formatPhone(e.target.value))} placeholder="010-0000-0000" inputMode="numeric" />
+              </label>
+
+              <label className="field-label">
+                <span className="field-title">참여 레벨 <em>*</em></span>
+                <select className="text-input select-input" value={form.level} onChange={(e) => setField('level', e.target.value)}>
+                  <option value="">레벨을 선택해주세요</option>
+                  {LEVELS.map((level) => <option key={level} value={level}>{level}</option>)}
+                </select>
+              </label>
+
+              <label className="field-label">
+                <span className="field-title">제출확인 번호 <em>*</em></span>
+                <div className="check-code-input-wrap">
+                  <KeyRound size={18} />
+                  <input className="text-input" value={form.checkCode} onChange={(e) => setField('checkCode', e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="숫자 6자리" inputMode="numeric" maxLength={6} />
+                </div>
+              </label>
+            </div>
+
+            {error && <ErrorBox message={error} />}
+            <div className="check-form-actions">
+              <a className="ghost-button" href="/"><ArrowLeft size={17} /> 처음으로</a>
+              <button className="primary-button" disabled={loading}>
+                {loading ? <><Loader2 size={18} className="spin" /> 확인 중...</> : <><Search size={18} /> 제출현황 확인</>}
+              </button>
+            </div>
+          </form>
+        </section>
+
+        {searched && (
+          <section className="check-results">
+            <div className="check-results-heading">
+              <div>
+                <h2>제출한 미션</h2>
+                <p>총 {results.length}건의 제출내역을 확인했습니다.</p>
+              </div>
+              <a href="/submit" className="primary-button check-new-mission">미션하러 가기 <ArrowRight size={17} /></a>
+            </div>
+
+            {results.length === 0 ? (
+              <div className="check-empty">
+                <ClipboardCheck size={28} />
+                <strong>일치하는 제출내역이 없습니다.</strong>
+                <p>입력정보와 제출확인 번호가 맞는지 다시 확인해주세요.</p>
+              </div>
+            ) : (
+              <div className="check-result-list">
+                {results.map((record) => {
+                  const mission = MISSIONS.find((item) => item.id === Number(record.mission_id))
+                  const checked = record.status === '확인'
+                  return (
+                    <article className="check-result-row" key={record.submission_id}>
+                      <span className="check-mission-number">{String(record.mission_id).padStart(2, '0')}</span>
+                      <div className="check-result-copy">
+                        <strong>{mission?.title ?? `미션 ${record.mission_id}`}</strong>
+                        <span>활동일 {record.activity_date || '-'}</span>
+                        <span>제출일 {formatDateTime(record.created_at)}</span>
+                      </div>
+                      <span className={`check-status ${checked ? 'checked' : 'waiting'}`}>
+                        {checked ? <Check size={15} /> : <Loader2 size={15} />}
+                        {checked ? '미션 확인' : '확인 대기'}
+                      </span>
+                    </article>
+                  )
+                })}
+              </div>
+            )}
+          </section>
+        )}
+      </main>
+    </div>
+  )
+}
+
+
 function AdminPage() {
   const [session, setSession] = useState(null)
   const [checkingSession, setCheckingSession] = useState(true)
@@ -794,6 +1022,8 @@ function AdminDashboard({ session }) {
   const [exporting, setExporting] = useState(false)
   const [error, setError] = useState('')
   const [photoViewer, setPhotoViewer] = useState(null)
+  const [detailRecord, setDetailRecord] = useState(null)
+  const [updatingStatusId, setUpdatingStatusId] = useState(null)
 
   const missionMap = useMemo(
     () => Object.fromEntries(MISSIONS.map((item) => [item.id, item])),
@@ -966,6 +1196,50 @@ function AdminDashboard({ session }) {
     }
   }
 
+  const updateStatus = async (record, nextStatus) => {
+    if (!['접수', '확인'].includes(nextStatus)) return
+    setUpdatingStatusId(record.id)
+    setError('')
+
+    try {
+      const { error: updateError } = await supabase
+        .from('submissions')
+        .update({ status: nextStatus })
+        .eq('id', record.id)
+
+      if (updateError) throw updateError
+
+      setRecords((prev) => prev.map((item) => item.id === record.id ? { ...item, status: nextStatus } : item))
+      setDetailRecord((prev) => prev?.id === record.id ? { ...prev, status: nextStatus } : prev)
+    } catch (err) {
+      console.error('상태 변경 오류:', err)
+      setError('상태를 변경하지 못했습니다. 관리자 UPDATE 정책을 확인해주세요.')
+    } finally {
+      setUpdatingStatusId(null)
+    }
+  }
+
+  const downloadPhoto = async (url, record, index) => {
+    try {
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('사진 다운로드에 실패했습니다.')
+      const blob = await response.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      const safeName = (record?.participant_name || 'participant').replace(/[^0-9a-zA-Z가-힣_-]/g, '_')
+      const extension = blob.type.includes('png') ? 'png' : blob.type.includes('webp') ? 'webp' : 'jpg'
+      link.href = objectUrl
+      link.download = `${safeName}_미션${record?.mission_id ?? ''}_인증사진${index + 1}.${extension}`
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(objectUrl)
+    } catch (err) {
+      console.error('사진 다운로드 오류:', err)
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
+  }
+
   const logout = async () => {
     await supabase.auth.signOut()
   }
@@ -1018,54 +1292,78 @@ function AdminDashboard({ session }) {
         ) : records.length === 0 ? (
           <div className="admin-empty"><Images size={30} /><p>아직 제출된 실적이 없습니다.</p></div>
         ) : (
-          <div className="admin-record-list">
-            {records.map((record) => (
-              <article className="admin-record-card" key={record.id}>
-                <div className="admin-record-top">
-                  <div className="admin-record-person">
-                    <span className="admin-mission-badge">{String(record.mission_id).padStart(2, '0')}</span>
-                    <div>
-                      <h3>{record.participant_name || '이름 없음'} <span>{record.level || '레벨 미입력'}</span></h3>
-                      <p>{missionMap[record.mission_id]?.title ?? `미션 ${record.mission_id}`}</p>
-                    </div>
-                  </div>
-                  <div className="admin-record-date">
-                    <strong>{formatDateTime(record.created_at)}</strong>
-                    <span>제출</span>
-                  </div>
-                </div>
-
-                <div className="admin-meta-grid">
-                  <div><span>연락처</span><strong>{record.phone || '-'}</strong></div>
-                  <div><span>활동일</span><strong>{record.activity_date || '-'}</strong></div>
-                  <div><span>상태</span><strong>{record.status || '-'}</strong></div>
-                </div>
-
-                <div className="admin-answer-grid">
-                  {[record.answer_1, record.answer_2, record.answer_3].map((answer, index) => (
-                    <div key={index}>
-                      <span>질문 {index + 1}</span>
-                      <p>{answer || '-'}</p>
-                    </div>
-                  ))}
-                  {record.comment && <div><span>인증 설명</span><p>{record.comment}</p></div>}
-                </div>
-
-                <div className="admin-photo-section">
-                  <div className="admin-photo-head"><span>인증사진</span><b>{record.photoUrls.length}장</b></div>
-                  {record.photoUrls.length ? (
-                    <div className="admin-photo-grid">
-                      {record.photoUrls.map((url, index) => (
-                        <button key={url} type="button" onClick={() => setPhotoViewer({ urls: record.photoUrls, index, name: record.participant_name })}>
-                          <img src={url} alt={`${record.participant_name} 인증사진 ${index + 1}`} />
-                          <span><Eye size={15} /> 크게 보기</span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : <p className="admin-muted">등록된 사진이 없습니다.</p>}
-                </div>
-              </article>
-            ))}
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>제출일시</th>
+                  <th>미션</th>
+                  <th>이름</th>
+                  <th>레벨</th>
+                  <th>연락처</th>
+                  <th>활동일</th>
+                  <th>상태</th>
+                  <th>인증사진</th>
+                  <th>내용</th>
+                </tr>
+              </thead>
+              <tbody>
+                {records.map((record) => (
+                  <tr key={record.id}>
+                    <td className="admin-nowrap">{formatDateTime(record.created_at)}</td>
+                    <td>
+                      <div className="admin-mission-cell">
+                        <span>{String(record.mission_id).padStart(2, '0')}</span>
+                        <strong>{missionMap[record.mission_id]?.title ?? `미션 ${record.mission_id}`}</strong>
+                      </div>
+                    </td>
+                    <td><strong>{record.participant_name || '-'}</strong></td>
+                    <td>
+                      <span className={`admin-level-badge ${record.level ? '' : 'empty'}`}>
+                        {record.level || '미입력'}
+                      </span>
+                    </td>
+                    <td className="admin-nowrap">{record.phone || '-'}</td>
+                    <td className="admin-nowrap">{record.activity_date || '-'}</td>
+                    <td>
+                      <select
+                        className={`admin-status-select ${record.status === '확인' ? 'checked' : ''}`}
+                        value={record.status === '확인' ? '확인' : '접수'}
+                        onChange={(e) => updateStatus(record, e.target.value)}
+                        disabled={updatingStatusId === record.id}
+                      >
+                        <option value="접수">접수</option>
+                        <option value="확인">확인</option>
+                      </select>
+                    </td>
+                    <td>
+                      {record.photoUrls.length ? (
+                        <div className="admin-thumb-row">
+                          {record.photoUrls.map((url, index) => (
+                            <button
+                              type="button"
+                              className="admin-thumb-button"
+                              key={`${record.id}-${index}`}
+                              onClick={() => setPhotoViewer({ urls: record.photoUrls, index, name: record.participant_name, record })}
+                              title={`인증사진 ${index + 1} 크게 보기`}
+                            >
+                              <img src={url} alt={`${record.participant_name} 인증사진 ${index + 1}`} />
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="admin-no-photo">없음</span>
+                      )}
+                    </td>
+                    <td>
+                      <button className="admin-detail-button" type="button" onClick={() => setDetailRecord(record)}>
+                        상세보기
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
@@ -1076,6 +1374,73 @@ function AdminDashboard({ session }) {
         </div>
       </main>
 
+      {detailRecord && (
+        <div className="admin-detail-modal" role="dialog" aria-modal="true" onClick={() => setDetailRecord(null)}>
+          <div className="admin-detail-card" onClick={(event) => event.stopPropagation()}>
+            <button className="photo-modal-close" onClick={() => setDetailRecord(null)} aria-label="상세 닫기"><X size={20} /></button>
+            <div className="admin-detail-head">
+              <div>
+                <span className="admin-mission-badge">{String(detailRecord.mission_id).padStart(2, '0')}</span>
+                <h2>{detailRecord.participant_name || '이름 없음'}</h2>
+                <p>{missionMap[detailRecord.mission_id]?.title ?? `미션 ${detailRecord.mission_id}`}</p>
+              </div>
+              <span className={`admin-level-badge ${detailRecord.level ? '' : 'empty'}`}>{detailRecord.level || '레벨 미입력'}</span>
+            </div>
+
+            <div className="admin-detail-meta">
+              <div><span>제출일시</span><strong>{formatDateTime(detailRecord.created_at)}</strong></div>
+              <div><span>연락처</span><strong>{detailRecord.phone || '-'}</strong></div>
+              <div><span>활동일</span><strong>{detailRecord.activity_date || '-'}</strong></div>
+              <div>
+                <span>상태</span>
+                <select
+                  className={`admin-status-select ${detailRecord.status === '확인' ? 'checked' : ''}`}
+                  value={detailRecord.status === '확인' ? '확인' : '접수'}
+                  onChange={(e) => updateStatus(detailRecord, e.target.value)}
+                  disabled={updatingStatusId === detailRecord.id}
+                >
+                  <option value="접수">접수</option>
+                  <option value="확인">확인</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="admin-detail-answers">
+              {[
+                detailRecord.answer_1,
+                detailRecord.answer_2,
+                detailRecord.answer_3,
+              ].map((answer, index) => (
+                <div key={index}>
+                  <span>{missionMap[detailRecord.mission_id]?.questions?.[index] ?? `질문 ${index + 1}`}</span>
+                  <p>{answer || '-'}</p>
+                </div>
+              ))}
+              {detailRecord.comment && (
+                <div>
+                  <span>인증 설명</span>
+                  <p>{detailRecord.comment}</p>
+                </div>
+              )}
+            </div>
+
+            {detailRecord.photoUrls.length > 0 && (
+              <div className="admin-detail-photos">
+                <h3>인증사진</h3>
+                <div className="admin-photo-grid">
+                  {detailRecord.photoUrls.map((url, index) => (
+                    <button key={`${detailRecord.id}-detail-${index}`} type="button" onClick={() => setPhotoViewer({ urls: detailRecord.photoUrls, index, name: detailRecord.participant_name, record: detailRecord })}>
+                      <img src={url} alt={`${detailRecord.participant_name} 인증사진 ${index + 1}`} />
+                      <span><Eye size={15} /> 크게 보기</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {photoViewer && (
         <div className="photo-modal" role="dialog" aria-modal="true" onClick={() => setPhotoViewer(null)}>
           <div className="photo-modal-card" onClick={(event) => event.stopPropagation()}>
@@ -1083,7 +1448,16 @@ function AdminDashboard({ session }) {
             <img src={photoViewer.urls[photoViewer.index]} alt={`${photoViewer.name} 인증사진`} />
             <div className="photo-modal-nav">
               <button className="ghost-button" disabled={photoViewer.index <= 0} onClick={() => setPhotoViewer((prev) => ({ ...prev, index: prev.index - 1 }))}><ChevronLeft size={17} /> 이전</button>
-              <span>{photoViewer.index + 1} / {photoViewer.urls.length}</span>
+              <div className="photo-modal-center">
+                <span>{photoViewer.index + 1} / {photoViewer.urls.length}</span>
+                <button
+                  className="primary-button photo-download-button"
+                  type="button"
+                  onClick={() => downloadPhoto(photoViewer.urls[photoViewer.index], photoViewer.record, photoViewer.index)}
+                >
+                  <Download size={16} /> 사진 저장
+                </button>
+              </div>
               <button className="ghost-button" disabled={photoViewer.index >= photoViewer.urls.length - 1} onClick={() => setPhotoViewer((prev) => ({ ...prev, index: prev.index + 1 }))}>다음 <ChevronRight size={17} /></button>
             </div>
           </div>
