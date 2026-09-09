@@ -22,6 +22,8 @@ import {
   Search,
   Play,
   KeyRound,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { supabase } from './supabase'
@@ -1103,6 +1105,9 @@ function AdminDashboard({ session }) {
   const [resetCode, setResetCode] = useState('')
   const [resettingCode, setResettingCode] = useState(false)
   const [issuedCode, setIssuedCode] = useState('')
+  const [showClearModal, setShowClearModal] = useState(false)
+  const [clearConfirmText, setClearConfirmText] = useState('')
+  const [clearingData, setClearingData] = useState(false)
 
   const missionMap = useMemo(
     () => Object.fromEntries(MISSIONS.map((item) => [item.id, item])),
@@ -1383,6 +1388,62 @@ function AdminDashboard({ session }) {
     }
   }
 
+  const openClearModal = () => {
+    setClearConfirmText('')
+    setError('')
+    setShowClearModal(true)
+  }
+
+  const clearSubmissionData = async () => {
+    if (clearConfirmText.trim() !== '초기화') {
+      setError('초기화를 진행하려면 확인란에 "초기화"를 입력해주세요.')
+      return
+    }
+
+    setClearingData(true)
+    setError('')
+
+    try {
+      const targetRows = await fetchAllForExport()
+      const photoPaths = targetRows.flatMap((row) => parsePaths(row.photo_paths))
+
+      for (let i = 0; i < photoPaths.length; i += 100) {
+        const chunk = photoPaths.slice(i, i + 100)
+        const { error: storageDeleteError } = await supabase.storage
+          .from('mission-photos')
+          .remove(chunk)
+
+        if (storageDeleteError) throw storageDeleteError
+      }
+
+      let deleteQuery = supabase
+        .from('submissions')
+        .delete()
+        .gte('created_at', '1900-01-01T00:00:00Z')
+
+      if (missionFilter !== 'all') {
+        deleteQuery = deleteQuery.eq('mission_id', Number(missionFilter))
+      }
+
+      const { error: deleteError } = await deleteQuery
+      if (deleteError) throw deleteError
+
+      setShowClearModal(false)
+      setClearConfirmText('')
+      setPage(1)
+      setPhotoViewer(null)
+      setDetailRecord(null)
+
+      await fetchCounts()
+      await fetchRecords()
+    } catch (err) {
+      console.error('제출자료 초기화 오류:', err)
+      setError('제출자료를 초기화하지 못했습니다. 관리자 삭제 권한을 확인해주세요.')
+    } finally {
+      setClearingData(false)
+    }
+  }
+
   const logout = async () => {
     await supabase.auth.signOut()
   }
@@ -1424,6 +1485,9 @@ function AdminDashboard({ session }) {
             <button className="ghost-button" onClick={refresh} disabled={loading}><RefreshCw size={16} className={loading ? 'spin' : ''} /> 새로고침</button>
             <button className="primary-button" onClick={exportExcel} disabled={exporting}>
               {exporting ? <><Loader2 size={16} className="spin" /> 엑셀 생성 중</> : <><Download size={16} /> 엑셀 다운로드</>}
+            </button>
+            <button className="danger-button" onClick={openClearModal} disabled={loading || (counts.all ?? 0) === 0}>
+              <Trash2 size={16} /> 제출내용 초기화
             </button>
           </div>
         </section>
@@ -1527,6 +1591,58 @@ function AdminDashboard({ session }) {
           <button className="ghost-button" disabled={page >= totalPages || loading} onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}>다음 <ChevronRight size={17} /></button>
         </div>
       </main>
+
+      {showClearModal && (
+        <div className="admin-detail-modal" role="dialog" aria-modal="true" onClick={() => !clearingData && setShowClearModal(false)}>
+          <div className="admin-clear-card" onClick={(event) => event.stopPropagation()}>
+            <button className="photo-modal-close" onClick={() => setShowClearModal(false)} aria-label="닫기" disabled={clearingData}>
+              <X size={20} />
+            </button>
+
+            <div className="admin-clear-heading">
+              <span className="admin-clear-icon"><AlertTriangle size={22} /></span>
+              <div>
+                <h2>제출내용 초기화</h2>
+                <p>
+                  {missionFilter === 'all'
+                    ? `현재 저장된 전체 제출자료 ${counts.all ?? 0}건`
+                    : `${missionMap[Number(missionFilter)]?.title ?? `미션 ${missionFilter}`} 제출자료 ${counts[Number(missionFilter)] ?? 0}건`}
+                </p>
+              </div>
+            </div>
+
+            <div className="admin-clear-warning">
+              <strong>삭제 후에는 복구할 수 없습니다.</strong>
+              <p>제출 답변과 인증사진이 함께 삭제됩니다. 관리자 계정, 미션 설정, Supabase 구조는 삭제되지 않습니다.</p>
+              <p>필요한 실적은 먼저 엑셀로 내려받은 뒤 초기화해주세요.</p>
+            </div>
+
+            <label className="field-label">
+              <span className="field-title">확인을 위해 아래에 <b>초기화</b>를 입력해주세요.</span>
+              <input
+                className="text-input"
+                value={clearConfirmText}
+                onChange={(e) => setClearConfirmText(e.target.value)}
+                placeholder="초기화"
+                autoComplete="off"
+                disabled={clearingData}
+              />
+            </label>
+
+            <div className="admin-clear-actions">
+              <button className="ghost-button" type="button" onClick={() => setShowClearModal(false)} disabled={clearingData}>취소</button>
+              <button
+                className="danger-button danger-confirm-button"
+                type="button"
+                onClick={clearSubmissionData}
+                disabled={clearingData || clearConfirmText.trim() !== '초기화'}
+              >
+                {clearingData ? <><Loader2 size={17} className="spin" /> 삭제 중...</> : <><Trash2 size={17} /> 정말 초기화하기</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {resetTarget && (
         <div className="admin-detail-modal" role="dialog" aria-modal="true" onClick={() => setResetTarget(null)}>
