@@ -2125,3 +2125,56 @@ input[type="date"].text-input { width:100%; min-width:0; box-sizing:border-box; 
     flex-wrap: wrap;
   }
 }
+
+
+/* ===== 관리자 상세보기: 참가자 단위 비밀번호 관리 ===== */
+.participant-password-tools {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  padding: 14px 15px !important;
+  border: 1px solid #dce5df !important;
+  border-radius: 12px !important;
+  background: #f7faf7 !important;
+}
+
+.participant-password-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.participant-password-label {
+  color: #2f604a;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.participant-password-copy small {
+  color: #718078;
+  font-size: 11px;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.participant-password-copy small strong {
+  color: #40594c;
+}
+
+.participant-password-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .participant-password-tools {
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+
+  .participant-password-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
