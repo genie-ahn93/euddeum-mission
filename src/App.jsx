@@ -593,10 +593,11 @@ function MissionSubmitPage() {
                   <strong>내가 고른 미션으로 으뜸성장챌린지를 끝까지 완주해보세요!</strong>
                 </p>
 
-                <p>
-                  문의: 시흥시청소년수련관 청소년활동사업팀 031-315-1890(내선 1).</strong>
-                </p>
-
+                <div className="notice-contact-box">
+                  <span className="notice-contact-label">☎ 추가미션 참여 문의</span>
+                  <strong>시흥시청소년수련관 청소년활동사업팀</strong>
+                  <a href="tel:0313151890">031-315-1890 (내선 1)</a>
+                </div>
               </div>
             </details>
           </div>
