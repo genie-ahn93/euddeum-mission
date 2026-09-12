@@ -2082,3 +2082,14 @@ input[type="date"].text-input { width:100%; min-width:0; box-sizing:border-box; 
     flex-direction: column;
   }
 }
+
+
+/* 첫 화면 시작 버튼 단일화 */
+.landing-start-actions.single {
+  display: block;
+}
+
+.landing-start-actions.single .landing-start-primary {
+  width: 100%;
+  box-sizing: border-box;
+}
