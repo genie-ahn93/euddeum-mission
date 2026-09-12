@@ -1199,6 +1199,8 @@ function AdminDashboard({ session }) {
   const [showClearModal, setShowClearModal] = useState(false)
   const [clearConfirmText, setClearConfirmText] = useState('')
   const [clearingData, setClearingData] = useState(false)
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+  const [checkingRole, setCheckingRole] = useState(true)
 
   const missionMap = useMemo(
     () => Object.fromEntries(MISSIONS.map((item) => [item.id, item])),
@@ -1283,6 +1285,30 @@ function AdminDashboard({ session }) {
     setTotal(count ?? 0)
     setLoading(false)
   }
+
+  useEffect(() => {
+    let mounted = true
+
+    const checkRole = async () => {
+      setCheckingRole(true)
+      try {
+        const { data, error: roleError } = await supabase.rpc('is_super_admin')
+        if (roleError) throw roleError
+        if (mounted) setIsSuperAdmin(data === true)
+      } catch (err) {
+        console.error('관리자 역할 확인 오류:', err)
+        if (mounted) setIsSuperAdmin(false)
+      } finally {
+        if (mounted) setCheckingRole(false)
+      }
+    }
+
+    checkRole()
+
+    return () => {
+      mounted = false
+    }
+  }, [session?.user?.id])
 
   useEffect(() => {
     fetchCounts()
@@ -1480,12 +1506,22 @@ function AdminDashboard({ session }) {
   }
 
   const openClearModal = () => {
+    if (!isSuperAdmin) {
+      setError('제출내용 초기화는 최고관리자만 사용할 수 있습니다.')
+      return
+    }
     setClearConfirmText('')
     setError('')
     setShowClearModal(true)
   }
 
   const clearSubmissionData = async () => {
+    if (!isSuperAdmin) {
+      setError('제출내용 초기화는 최고관리자만 사용할 수 있습니다.')
+      setShowClearModal(false)
+      return
+    }
+
     if (clearConfirmText.trim() !== '초기화') {
       setError('초기화를 진행하려면 확인란에 "초기화"를 입력해주세요.')
       return
@@ -1548,6 +1584,9 @@ function AdminDashboard({ session }) {
           <p className="admin-muted">미션별 최근 제출순으로 10건씩 확인할 수 있습니다.</p>
         </div>
         <div className="admin-header-actions">
+          <span className={`admin-role-badge ${isSuperAdmin ? 'super' : 'staff'}`}>
+            {checkingRole ? '권한 확인 중' : isSuperAdmin ? '최고관리자' : '일반관리자'}
+          </span>
           <span className="admin-email">{session.user.email}</span>
           <button className="ghost-button" onClick={logout}><LogOut size={16} /> 로그아웃</button>
         </div>
@@ -1577,9 +1616,11 @@ function AdminDashboard({ session }) {
             <button className="primary-button" onClick={exportExcel} disabled={exporting}>
               {exporting ? <><Loader2 size={16} className="spin" /> 엑셀 생성 중</> : <><Download size={16} /> 엑셀 다운로드</>}
             </button>
-            <button className="danger-button" onClick={openClearModal} disabled={loading || (counts.all ?? 0) === 0}>
-              <Trash2 size={16} /> 제출내용 초기화
-            </button>
+            {isSuperAdmin && (
+              <button className="danger-button" onClick={openClearModal} disabled={loading || (counts.all ?? 0) === 0}>
+                <Trash2 size={16} /> 제출내용 초기화
+              </button>
+            )}
           </div>
         </section>
 
@@ -1683,7 +1724,7 @@ function AdminDashboard({ session }) {
         </div>
       </main>
 
-      {showClearModal && (
+      {showClearModal && isSuperAdmin && (
         <div className="admin-detail-modal" role="dialog" aria-modal="true" onClick={() => !clearingData && setShowClearModal(false)}>
           <div className="admin-clear-card" onClick={(event) => event.stopPropagation()}>
             <button className="photo-modal-close" onClick={() => setShowClearModal(false)} aria-label="닫기" disabled={clearingData}>
