@@ -1008,40 +1008,105 @@ function LandingPage() {
   return (
     <div className="site-shell">
       <Header />
-      <main className="home-page">
-        <section className="home-hero">
+      <main className="landing-guide-page">
+        <section className="landing-guide-hero">
           <p className="eyebrow"><Sparkles size={15} /> EXTRA MISSION</p>
           <h1>시흥시<br />으뜸성장챌린지<br />추가미션</h1>
-          <p>도전하고, 기록하고, 내가 제출한 미션의 확인상태까지 한곳에서 확인해보세요.</p>
+          <p>
+            일상 속 작은 도전을 직접 고르고 실천하며,
+            나만의 성장경험을 한 걸음 더 확장해보세요.
+          </p>
         </section>
 
-        <section className="home-actions">
-          <a className="home-action-card primary" href="/submit">
-            <span className="home-action-icon"><Play size={27} /></span>
-            <div>
-              <strong>미션 참여하기</strong>
-              <p>내 정보를 한 번 입력하고, 미션 제출과 진행상태를 한곳에서 확인해요.</p>
-            </div>
-            <ArrowRight size={22} />
-          </a>
-
-          <a className="home-action-card" href="/check">
-            <span className="home-action-icon"><ClipboardCheck size={27} /></span>
-            <div>
-              <strong>내 제출현황</strong>
-              <p>로그인 후 제출완료 미션과 담당자 확인상태를 확인해요.</p>
-            </div>
-            <ArrowRight size={22} />
-          </a>
+        <section className="landing-summary-card">
+          <div className="landing-summary-item">
+            <span>📅 인증기간</span>
+            <strong>2026. 9. 18.(금) ~ 10. 19.(월)</strong>
+          </div>
+          <div className="landing-summary-item">
+            <span>⭐ 참여점수</span>
+            <strong>미션 1개당 +2점 · 최대 5개, 총 +10점</strong>
+          </div>
+          <div className="landing-summary-item">
+            <span>💡 점수 반영</span>
+            <strong>플랫폼 미반영 · 활동비 지급 시 최종 점수에 합산</strong>
+          </div>
+          <p className="landing-summary-note">
+            추가미션 점수는 <b>1~2위 상위 활동비 순위 산정에는 포함되지 않습니다.</b>
+          </p>
         </section>
 
-        <p className="home-note">
-          이름, 생년월일, 레벨과 숫자 6자리 비밀번호를 한 번 입력하면 현재 브라우저 이용 중에는 다시 입력하지 않아도 됩니다.
-        </p>
+        <section className="landing-mission-section">
+          <div className="landing-section-heading">
+            <div>
+              <span className="landing-section-kicker">MISSION GUIDE</span>
+              <h2>어떤 미션이 있나요?</h2>
+              <p>총 8개의 추가미션 중 원하는 미션을 골라 참여할 수 있어요.</p>
+            </div>
+          </div>
+
+          <div className="landing-mission-grid">
+            {MISSIONS.map((mission) => (
+              <article className="landing-mission-card" key={mission.id}>
+                <span className="landing-mission-number">{String(mission.id).padStart(2, '0')}</span>
+                <div>
+                  <strong>{mission.title}</strong>
+                  <p>{mission.summary}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="landing-proof-guide">
+          <div className="landing-proof-icon"><ImagePlus size={22} /></div>
+          <div>
+            <strong>공통 인증 안내</strong>
+            <p>
+              모든 미션은 <b>참여자 본인의 얼굴이 포함된 활동사진 1장</b>을 기본으로 제출해 주세요.
+              미션에 따라 걸음 수 캡처, 수거한 쓰레기 사진, 문제 상황 사진 등 추가 인증자료가 필요합니다.
+            </p>
+          </div>
+        </section>
+
+        <section className="landing-start-section">
+          <div>
+            <span className="landing-section-kicker">READY?</span>
+            <h2>이제 미션을 시작해볼까요?</h2>
+            <p>
+              이름·생년월일·레벨·숫자 6자리 비밀번호를 한 번 입력하면
+              현재 브라우저 이용 중에는 다시 입력하지 않아도 됩니다.
+            </p>
+          </div>
+
+          <div className="landing-start-actions">
+            <a className="landing-start-primary" href="/submit">
+              <span><Play size={20} /></span>
+              <div>
+                <strong>미션 제출하기</strong>
+                <small>내 정보 입력 후 미션을 선택해 인증해요.</small>
+              </div>
+              <ArrowRight size={21} />
+            </a>
+
+            <a className="landing-start-secondary" href="/check">
+              <ClipboardCheck size={18} />
+              <span>이미 참여했나요? <strong>내 제출현황 확인하기</strong></span>
+              <ArrowRight size={17} />
+            </a>
+          </div>
+        </section>
+
+        <section className="landing-contact">
+          <span>☎ 추가미션 참여 문의</span>
+          <strong>시흥시청소년수련관 청소년활동사업팀</strong>
+          <a href="tel:0313151890">031-315-1890 (내선 1)</a>
+        </section>
       </main>
     </div>
   )
 }
+
 
 function AdminPage() {
   const [session, setSession] = useState(null)
