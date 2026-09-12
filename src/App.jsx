@@ -1079,20 +1079,14 @@ function LandingPage() {
             </p>
           </div>
 
-          <div className="landing-start-actions">
+          <div className="landing-start-actions single">
             <a className="landing-start-primary" href="/submit">
               <span><Play size={20} /></span>
               <div>
                 <strong>미션 제출하기</strong>
-                <small>내 정보 입력 후 미션을 선택해 인증해요.</small>
+                <small>내 정보 입력 후 미션을 선택하고, 제출현황까지 한 번에 확인할 수 있어요.</small>
               </div>
               <ArrowRight size={21} />
-            </a>
-
-            <a className="landing-start-secondary" href="/check">
-              <ClipboardCheck size={18} />
-              <span>이미 참여했나요? <strong>내 제출현황 확인하기</strong></span>
-              <ArrowRight size={17} />
             </a>
           </div>
         </section>
