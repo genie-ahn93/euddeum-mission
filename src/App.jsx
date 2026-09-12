@@ -347,6 +347,22 @@ function ParticipantPortal({ initialView = 'missions' }) {
 
     setLoadingStatus(true)
     try {
+      const { data: isRegistered, error: registeredError } = await supabase.rpc(
+        'validate_registered_participant',
+        {
+          p_name: identity.name.trim(),
+          p_birth_date: identity.birthDate,
+          p_level: identity.level,
+        },
+      )
+
+      if (registeredError) throw registeredError
+
+      if (isRegistered !== true) {
+        setError('으뜸성장챌린지 참여자 정보를 확인할 수 없습니다. 이름·생년월일·레벨을 다시 확인해주세요.')
+        return
+      }
+
       const participantKey = await makeParticipantKey(
         identity.name,
         identity.birthDate,
@@ -622,9 +638,14 @@ function ParticipantPortal({ initialView = 'missions' }) {
             <p className="eyebrow"><ShieldCheck size={15} /> PARTICIPANT</p>
             <h1>{initialView === 'status' ? '내 제출현황 확인' : '추가미션 참여하기'}</h1>
             <p className="participant-login-desc">
-              한 번 정보를 입력하면 이 화면을 사용하는 동안 다시 입력하지 않아도 돼요.
-              브라우저를 닫거나 '내 정보 초기화'를 누르면 정보가 사라집니다.
+              기존 으뜸성장챌린지 참여자 명단과 <strong>이름·생년월일·레벨이 모두 일치해야</strong> 참여할 수 있어요.
+              한 번 확인되면 이 화면을 사용하는 동안 다시 입력하지 않아도 됩니다.
             </p>
+
+            <div className="participant-roster-note">
+              <ShieldCheck size={17} />
+              <span>등록된 참여자만 추가미션에 참여할 수 있습니다.</span>
+            </div>
 
             <form onSubmit={loginParticipant} className="participant-login-form">
               <label className="field-label">
