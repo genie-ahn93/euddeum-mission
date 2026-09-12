@@ -50,7 +50,7 @@ const MISSIONS = [
       '스마트폰 없이 활동해보니 평소와 어떤 점이 달랐나요?',
       '30분 동안 가장 집중이 잘 되었던 순간은 언제였나요?',
     ],
-    proof: '활동사진 또는 타이머·시간 확인 화면',
+    proof: '본인 활동사진 1장',
     minPhotos: 1,
   },
   {
@@ -62,8 +62,8 @@ const MISSIONS = [
       '걸으면서 새롭게 발견하거나 기억에 남았던 것이 있었나요?',
       '8천보를 걸은 뒤 나의 기분이나 몸 상태는 어땠나요?',
     ],
-    proof: '걸음 수가 확인되는 앱 화면 캡처',
-    minPhotos: 1,
+    proof: '걸음 수가 확인되는 앱 화면 캡처 + 본인 활동사진 1장',
+    minPhotos: 2,
   },
   {
     id: 4,
@@ -74,7 +74,7 @@ const MISSIONS = [
       '가장 많이 발견한 쓰레기는 무엇이었나요?',
       '우리동네를 더 깨끗하게 만들기 위해 필요한 것은 무엇이라고 생각하나요?',
     ],
-    proof: '활동사진 + 수거한 쓰레기 사진',
+    proof: '본인 활동사진 1장 + 수거한 쓰레기 사진 1장',
     minPhotos: 2,
   },
   {
@@ -86,7 +86,7 @@ const MISSIONS = [
       '대신 어떤 물건이나 방법을 사용했나요?',
       '일회용품 없이 생활하며 가장 어려웠던 점은 무엇이었나요?',
     ],
-    proof: '텀블러, 다회용기, 장바구니 등 실천사진',
+    proof: '텀블러·다회용기·장바구니 등 실천사진',
     minPhotos: 1,
   },
   {
@@ -98,7 +98,7 @@ const MISSIONS = [
       '이 장소에서 새롭게 알게 된 것은 무엇인가요?',
       '친구에게 이곳을 추천한다면 어떤 이유로 추천하고 싶나요?',
     ],
-    proof: '장소가 확인되는 현장사진',
+    proof: '발견한 장소에서 촬영한 활동사진',
     minPhotos: 1,
   },
   {
@@ -110,7 +110,7 @@ const MISSIONS = [
       '조금 바뀌었으면 좋겠다고 생각한 점은 무엇인가요?',
       '어떻게 바뀌면 더 좋은 동네가 될까요?',
     ],
-    proof: '관찰한 장소 사진',
+    proof: '관찰한 장소에서 촬영한 활동사진',
     minPhotos: 1,
   },
   {
@@ -122,8 +122,8 @@ const MISSIONS = [
       '누가, 언제 이 문제 때문에 불편할 것 같나요?',
       '이 문제를 해결할 수 있는 방법을 하나 제안해주세요.',
     ],
-    proof: '문제 상황이 확인되는 사진 또는 직접 작성한 설명',
-    minPhotos: 0,
+    proof: '문제 상황 사진 + 본인 활동사진 1장',
+    minPhotos: 2,
   },
 ]
 
@@ -292,7 +292,7 @@ function MissionSubmitPage() {
       return
     }
     if (!/^\d{6}$/.test(form.checkCode)) {
-      setError('제출확인 번호를 숫자 6자리로 입력해주세요.')
+      setError('비밀번호를 숫자 6자리로 입력해주세요.')
       return
     }
     setError('')
@@ -353,14 +353,17 @@ function MissionSubmitPage() {
     if (form.answers.some((answer) => !answer.trim())) return '질문 3개에 모두 답해주세요.'
     if (photos.length > 3) return '인증사진은 최대 3장까지 업로드할 수 있어요.'
 
-    if (mission.id === 4 && photos.length < 2) {
-      return '우리동네 클린업 챌린지는 인증사진을 최소 2장 업로드해주세요.'
-    }
-    if (mission.id !== 8 && photos.length < mission.minPhotos) {
-      return '인증사진을 최소 1장 업로드해주세요.'
-    }
-    if (mission.id === 8 && photos.length === 0 && !form.explanation.trim()) {
-      return '사진이 없다면 인증 설명을 작성해주세요.'
+    if (photos.length < mission.minPhotos) {
+      if (mission.id === 3) {
+        return '걸음 수가 확인되는 앱 화면 캡처와 본인 활동사진을 각각 1장씩 업로드해주세요.'
+      }
+      if (mission.id === 4) {
+        return '본인 활동사진 1장과 수거한 쓰레기 사진 1장을 업로드해주세요.'
+      }
+      if (mission.id === 8) {
+        return '문제 상황 사진 1장과 본인 활동사진 1장을 업로드해주세요.'
+      }
+      return '참여자 본인의 얼굴이 포함된 활동사진을 최소 1장 업로드해주세요.'
     }
     if (!form.consent) return '개인정보 및 인증자료 제출 안내에 동의해주세요.'
     return ''
@@ -434,7 +437,7 @@ function MissionSubmitPage() {
         answer_1: form.answers[0].trim(),
         answer_2: form.answers[1].trim(),
         answer_3: form.answers[2].trim(),
-        comment: mission.id === 8 && photos.length === 0 ? form.explanation.trim() : null,
+        comment: null,
         photo_paths: JSON.stringify(uploadedPaths),
         status: '접수',
       })
@@ -479,9 +482,9 @@ function MissionSubmitPage() {
             <p>담당자 확인 후 점수에 반영됩니다.</p>
 
             <div className="success-code-box">
-              <span>내 제출확인 번호</span>
+              <span>내 비밀번호</span>
               <strong>{form.checkCode}</strong>
-              <p>제출현황 확인에 필요해요. 같은 번호를 계속 사용하고, 이 화면을 캡처해두는 것을 권장합니다.</p>
+              <p>제출현황 확인에 필요한 비밀번호예요. 다른 미션을 제출할 때도 같은 비밀번호를 사용해 주세요. 잊지 않도록 이 화면을 캡처해두는 것을 권장합니다.</p>
             </div>
 
             <div className="success-actions">
@@ -521,38 +524,74 @@ function MissionSubmitPage() {
               <summary>
                 <span className="notice-summary-text">
                   <strong className="notice-open">🎯 추가미션 OPEN!</strong>
+                  <span className="notice-period">인증기간 <b>2026. 9. 18.(금) ~ 10. 19.(월)</b></span>
                   <span className="score-lines">
                     <span>미션 1개 완료 시 <b>+2점</b>,</span>
                     <span>최대 5개 참여 시 <b>총 +10점</b></span>
                   </span>
                   <span>
-                    추가점수는 기본 활동비 수여 기준 점수에는 포함되지만,
-                    <strong> 1~2위 상위 활동비 순위 산정에는 반영되지 않습니다.</strong>
+                    추가미션 점수는 <strong>플랫폼에 실시간 반영되지 않으며</strong>,
+                    으뜸성장보고회 종료 후 활동비 지급 시 기존 활동점수에 합산됩니다.
+                  </span>
+                  <span>
+                    단, <strong>1~2위 상위 활동비 순위 산정에는 반영되지 않습니다.</strong>
                   </span>
                 </span>
                 <span className="notice-more">자세히 보기</span>
               </summary>
 
               <div className="notice-detail">
-                <p><strong>으뜸성장챌린지, 아직 끝난 거 아니죠? 😎</strong><br />지속적인 참여를 응원하기 위한 <b>추가미션</b>이 열렸습니다!</p>
-                <p>일상 속에서 내가 할 수 있는 작은 도전을 직접 고르고, 하나씩 실천하며 <strong>나만의 성장경험을 더 채워보세요! 🌱</strong></p>
-                <p>미션 1개를 완료할 때마다 <strong>+2점!</strong><br />최대 5개까지 참여하면 <strong>총 +10점</strong>을 받을 수 있어요. 🙌</p>
+                <p>
+                  <strong>으뜸성장챌린지, 아직 끝난 거 아니죠? 😎</strong><br />
+                  지속적인 참여를 응원하기 위한 <b>추가미션</b>이 열렸습니다!
+                </p>
+
+                <p>
+                  일상 속에서 내가 할 수 있는 작은 도전을 직접 고르고, 하나씩 실천하며
+                  <strong> 나만의 성장경험을 더 채워보세요! 🌱</strong>
+                </p>
+
+                <div className="notice-key-info">
+                  <div><span>📅 인증기간</span><strong>2026. 9. 18.(금) ~ 10. 19.(월)</strong></div>
+                  <div><span>⭐ 참여점수</span><strong>미션 1개 완료 시 +2점</strong></div>
+                  <div><span>🙌 최대 참여</span><strong>5개 미션 · 총 +10점</strong></div>
+                </div>
+
                 <p className="mission-flow"><strong>도전하고 → 인증하고 → 성장점수까지 GET!</strong></p>
 
                 <div className="notice-divider" />
                 <p className="notice-subtitle">💡 추가점수는 이렇게 적용돼요!</p>
-                <p>추가미션 점수는 <strong>기본 활동비 수여 기준을 충족하기 위한 점수에는 포함</strong>됩니다.</p>
-                <p>다만, <strong>점수 순위에 따라 지급되는 상위 활동비 산정에는 포함되지 않아요!</strong></p>
+
+                <p>
+                  추가미션 점수는 <strong>활동비 지급을 위한 추가점수</strong>로,
+                  <strong> 플랫폼에는 실시간 반영되지 않습니다.</strong>
+                </p>
+
+                <p>
+                  추가미션 인증기간과 으뜸성장보고회까지 모든 활동이 마무리된 후,
+                  <strong> 활동비 지급 시 기존 활동점수에 추가미션 점수를 합산하여 최종 점수를 산정</strong>합니다.
+                </p>
+
+                <p>
+                  다만, <strong>점수 순위에 따라 지급되는 1~2위 상위 활동비 산정에는 추가미션 점수가 포함되지 않습니다.</strong>
+                </p>
 
                 <div className="notice-example">
                   <strong>예시 👀</strong>
-                  <span>기존 활동점수 <b>55점</b> + 추가미션 <b>10점</b> = 총 <b>65점</b></span>
-                  <span>✅ 기본 활동비 <b>10만원 수여 가능!</b></span>
-                  <span>❌ 1~2위 순위 산정 시에는 추가미션 점수를 제외한 <b>기존 활동점수 55점</b>을 기준으로 합니다.</span>
+                  <span>기존 활동점수 <b>55점</b> + 추가미션 <b>10점</b> = 최종 <b>65점</b></span>
+                  <span>✅ <b>기본 활동비 10만원 수여 가능</b></span>
+                  <span>❌ 1~2위 순위 산정 시에는 추가미션 점수를 제외한 <b>기존 활동점수 55점</b>을 기준으로 산정</span>
                 </div>
 
-                <p>따라서 추가미션 점수를 포함해 1~2위가 되더라도 <strong>1위 40만원 / 2위 30만원의 상위 활동비 대상에는 해당되지 않습니다.</strong></p>
-                <p className="notice-closing">✨ 작은 도전도 쌓이면 멋진 성장기록이 됩니다.<br /><strong>내가 고른 미션으로 으뜸성장챌린지를 끝까지 완주해보세요!</strong></p>
+                <p>
+                  따라서 추가미션 점수를 포함한 최종 점수가 높더라도
+                  <strong> 1위 40만원 / 2위 30만원의 상위 활동비 대상 산정에는 반영되지 않습니다.</strong>
+                </p>
+
+                <p className="notice-closing">
+                  ✨ 작은 도전도 쌓이면 멋진 성장기록이 됩니다.<br />
+                  <strong>내가 고른 미션으로 으뜸성장챌린지를 끝까지 완주해보세요!</strong>
+                </p>
               </div>
             </details>
           </div>
@@ -656,19 +695,18 @@ function MissionSubmitPage() {
               </label>
 
               <label className="field-label">
-                <span className="field-title">제출확인 번호 <em>*</em></span>
+                <span className="field-title">비밀번호 <em>*</em></span>
                 <input
                   className="text-input"
                   value={form.checkCode}
                   onChange={(e) => setField('checkCode', e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="숫자 6자리를 정해주세요"
+                  placeholder="숫자 6자리를 입력해주세요"
                   inputMode="numeric"
                   autoComplete="off"
                   maxLength={6}
                 />
                 <small className="field-help field-help-important">
-                  이미 추가미션을 제출한 적이 있다면 <strong>이전에 사용한 것과 같은 번호</strong>를 입력해주세요.
-                  제출현황 확인에 필요하니 꼭 기억해주세요.
+                  처음 제출하는 경우 사용할 숫자 6자리를 직접 정해 주세요.<br />이미 추가미션을 제출한 적이 있다면 <strong>이전에 사용한 것과 같은 비밀번호</strong>를 입력해 주세요.
                 </small>
               </label>
 
@@ -752,16 +790,25 @@ function MissionSubmitPage() {
                 ))}
               </div>
 
+              <div className="common-proof-notice">
+                <div className="common-proof-title">
+                  <ImagePlus size={20} />
+                  <strong>공통 인증 안내</strong>
+                </div>
+                <p>모든 미션은 <b>참여자 본인의 얼굴이 포함된 활동사진 1장</b>을 기본으로 제출해 주세요.</p>
+                <p>미션에 따라 걸음 수 캡처, 수거한 쓰레기 사진, 문제 상황 사진 등 <b>추가 인증자료를 함께 제출</b>해야 합니다.</p>
+              </div>
+
               <div className="proof-box">
                 <div><ImagePlus size={20} /></div>
-                <p><strong>인증방법</strong><span>{mission.proof}</span></p>
+                <p><strong>미션별 인증방법</strong><span>{mission.proof}</span></p>
               </div>
 
               <div className="upload-section">
                 <div className="upload-head">
                   <div>
                     <strong className="field-title upload-title">
-                      인증사진 {mission.id === 8 ? null : <em>*</em>}
+                      인증사진 <em>*</em>
                     </strong>
                     <span>JPG · JPEG · PNG · WEBP / 원본 장당 최대 10MB / 최대 3장 · 선택 후 자동 압축</span>
                   </div>
@@ -795,18 +842,7 @@ function MissionSubmitPage() {
                 )}
               </div>
 
-              {mission.id === 8 && photos.length === 0 && (
-                <label className="field-label">
-                  <span className="field-title">인증 설명 <em>*</em></span>
-                  <textarea
-                    className="text-area"
-                    rows={4}
-                    value={form.explanation}
-                    onChange={(e) => setField('explanation', e.target.value)}
-                    placeholder="사진 대신 문제 상황을 자세히 설명해주세요."
-                  />
-                </label>
-              )}
+
 
               <label className="consent-row">
                 <input
@@ -869,7 +905,7 @@ function LandingPage() {
         </section>
 
         <p className="home-note">
-          제출확인 시 이름, 생년월일, 레벨과 직접 설정한 6자리 제출확인 번호가 필요합니다.
+          제출 확인 시 이름, 생년월일, 레벨과 직접 설정한 숫자 6자리 비밀번호가 필요합니다.
         </p>
       </main>
     </div>
@@ -896,7 +932,7 @@ function SubmissionCheckPage() {
     if (!form.name.trim()) return setError('이름을 입력해주세요.')
     if (!form.birthDate) return setError('생년월일을 입력해주세요.')
     if (!LEVELS.includes(form.level)) return setError('참여 레벨을 선택해주세요.')
-    if (!/^\d{6}$/.test(form.checkCode)) return setError('제출확인 번호 6자리를 입력해주세요.')
+    if (!/^\d{6}$/.test(form.checkCode)) return setError('비밀번호 6자리를 입력해주세요.')
 
     setLoading(true)
     try {
@@ -923,7 +959,7 @@ function SubmissionCheckPage() {
           <div className="check-heading">
             <p className="eyebrow"><ClipboardCheck size={15} /> SUBMISSION CHECK</p>
             <h1>내 미션 제출현황 확인</h1>
-            <p>제출할 때 입력한 정보와 제출확인 번호를 입력해주세요.</p>
+            <p>제출할 때 입력한 정보와 비밀번호를 입력해주세요.</p>
           </div>
 
           <form className="check-form" onSubmit={lookup}>
@@ -947,7 +983,7 @@ function SubmissionCheckPage() {
               </label>
 
               <label className="field-label">
-                <span className="field-title">제출확인 번호 <em>*</em></span>
+                <span className="field-title">비밀번호 <em>*</em></span>
                 <div className="check-code-input-wrap">
                   <KeyRound size={18} />
                   <input className="text-input" value={form.checkCode} onChange={(e) => setField('checkCode', e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="숫자 6자리" inputMode="numeric" maxLength={6} />
@@ -1296,11 +1332,11 @@ function AdminDashboard({ session }) {
   const resetParticipantCode = async () => {
     if (!resetTarget) return
     if (!/^\d{6}$/.test(resetCode)) {
-      setError('새 확인번호를 숫자 6자리로 입력해주세요.')
+      setError('새 비밀번호를 숫자 6자리로 입력해주세요.')
       return
     }
     if (!resetTarget.birth_date || !resetTarget.level || !resetTarget.participant_name) {
-      setError('생년월일·레벨 정보가 없는 기존 제출건은 확인번호를 재설정할 수 없습니다.')
+      setError('생년월일·레벨 정보가 없는 기존 제출건은 비밀번호를 재설정할 수 없습니다.')
       return
     }
 
@@ -1337,8 +1373,8 @@ function AdminDashboard({ session }) {
       ))
       setIssuedCode(resetCode)
     } catch (err) {
-      console.error('확인번호 재설정 오류:', err)
-      setError('확인번호를 재설정하지 못했습니다. 잠시 후 다시 시도해주세요.')
+      console.error('비밀번호 재설정 오류:', err)
+      setError('비밀번호를 재설정하지 못했습니다. 잠시 후 다시 시도해주세요.')
     } finally {
       setResettingCode(false)
     }
@@ -1512,7 +1548,7 @@ function AdminDashboard({ session }) {
                   <th>상태</th>
                   <th>인증사진</th>
                   <th>내용</th>
-                  <th>확인번호</th>
+                  <th>비밀번호</th>
                 </tr>
               </thead>
               <tbody>
@@ -1652,35 +1688,35 @@ function AdminDashboard({ session }) {
             <div className="admin-reset-heading">
               <span className="admin-reset-icon"><KeyRound size={21} /></span>
               <div>
-                <h2>제출확인 번호 재설정</h2>
+                <h2>비밀번호 재설정</h2>
                 <p>{resetTarget.participant_name} · {resetTarget.birth_date || '생년월일 미입력'} · {resetTarget.level || '레벨 미입력'}</p>
               </div>
             </div>
 
             {issuedCode ? (
               <div className="issued-code-box">
-                <span>새 제출확인 번호</span>
+                <span>새 비밀번호</span>
                 <strong>{issuedCode}</strong>
-                <p>이 번호를 참가자에게 전달해주세요. 창을 닫으면 다시 확인할 수 없습니다.</p>
+                <p>새 비밀번호를 참가자에게 전달해 주세요. 창을 닫으면 다시 확인할 수 없습니다.</p>
               </div>
             ) : (
               <>
                 <p className="admin-reset-guide">
-                  이 참가자가 제출한 모든 미션의 확인번호가 새 번호로 변경됩니다. 기존 번호는 더 이상 사용할 수 없습니다.
+                  이 참가자가 제출한 모든 미션의 비밀번호가 새 비밀번호로 변경됩니다. 기존 비밀번호는 더 이상 사용할 수 없습니다.
                 </p>
                 <div className="reset-code-row">
                   <input
                     className="text-input"
                     value={resetCode}
                     onChange={(e) => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="새 숫자 6자리"
+                    placeholder="새 비밀번호 6자리"
                     inputMode="numeric"
                     maxLength={6}
                   />
                   <button className="ghost-button" type="button" onClick={generateResetCode}>자동 생성</button>
                 </div>
                 <button className="primary-button reset-confirm-button" type="button" onClick={resetParticipantCode} disabled={resettingCode}>
-                  {resettingCode ? <><Loader2 size={17} className="spin" /> 변경 중...</> : <><RefreshCw size={17} /> 새 번호로 변경</>}
+                  {resettingCode ? <><Loader2 size={17} className="spin" /> 변경 중...</> : <><RefreshCw size={17} /> 새 비밀번호로 변경</>}
                 </button>
               </>
             )}
@@ -1721,9 +1757,9 @@ function AdminDashboard({ session }) {
 
             <div className="admin-detail-tools">
               <button className="admin-reset-button" type="button" onClick={() => openResetCode(detailRecord)}>
-                <RefreshCw size={14} /> 확인번호 재설정
+                <RefreshCw size={14} /> 비밀번호 재설정
               </button>
-              <small>기존 확인번호는 표시하지 않습니다. 필요할 때 새 번호로 재설정할 수 있습니다.</small>
+              <small>기존 비밀번호는 표시하지 않습니다. 필요할 때 새 비밀번호로 재설정할 수 있습니다.</small>
             </div>
 
             <div className="admin-detail-answers">
