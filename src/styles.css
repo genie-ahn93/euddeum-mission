@@ -1298,3 +1298,73 @@ input[type="date"].text-input { width:100%; min-width:0; box-sizing:border-box; 
     box-sizing: border-box;
   }
 }
+
+
+/* ===== 문의처 카드 최종 레이아웃 강제 보정 ===== */
+.notice-contact-box {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 7px !important;
+  align-items: stretch !important;
+  margin-top: 20px !important;
+  padding: 15px 16px !important;
+  border: 1px solid #d8e1db !important;
+  border-radius: 12px !important;
+  background: #f7faf7 !important;
+}
+
+.notice-contact-header {
+  display: block !important;
+  width: 100% !important;
+  color: #2f604a !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  line-height: 1.4 !important;
+}
+
+.notice-contact-org {
+  display: block !important;
+  width: 100% !important;
+  color: #53655b !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1.5 !important;
+  word-break: keep-all !important;
+}
+
+.notice-contact-phone {
+  display: inline-flex !important;
+  width: fit-content !important;
+  min-height: 0 !important;
+  padding: 2px 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #1f5b42 !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  line-height: 1.5 !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+}
+
+.notice-contact-phone span {
+  color: #6e7c74 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+.notice-contact-phone:hover {
+  background: transparent !important;
+  text-decoration: underline !important;
+}
+
+@media (max-width: 700px) {
+  .notice-contact-box {
+    grid-template-columns: 1fr !important;
+  }
+
+  .notice-contact-phone {
+    width: fit-content !important;
+  }
+}
