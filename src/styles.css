@@ -1368,3 +1368,396 @@ input[type="date"].text-input { width:100%; min-width:0; box-sizing:border-box; 
     width: fit-content !important;
   }
 }
+
+
+/* ===== 참가자 통합 포털 ===== */
+.participant-loading {
+  min-height: 55vh;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  color: #728078;
+}
+
+.participant-login-page {
+  width: min(620px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 46px 0 70px;
+}
+
+.participant-login-card {
+  padding: clamp(24px, 5vw, 38px);
+  border: 1px solid #dce2dd;
+  border-radius: 22px;
+  background: #fffdf8;
+  box-shadow: 0 16px 45px rgba(34, 76, 57, .07);
+}
+
+.participant-login-card h1 {
+  margin: 6px 0 8px;
+  color: #214c39;
+  font-size: clamp(28px, 5vw, 40px);
+  letter-spacing: -.035em;
+}
+
+.participant-login-desc {
+  margin: 0 0 24px;
+  color: #748078;
+  line-height: 1.7;
+  word-break: keep-all;
+}
+
+.participant-login-form {
+  display: grid;
+  gap: 3px;
+}
+
+.participant-login-button {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.participant-portal {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 28px 0 70px;
+}
+
+.participant-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border: 1px solid #dce2dd;
+  border-radius: 16px;
+  background: #fffdf8;
+}
+
+.participant-bar-copy {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px 7px;
+  align-items: baseline;
+}
+
+.participant-bar-copy > span {
+  color: #8b958f;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.participant-bar-copy > strong {
+  color: #214c39;
+  font-size: 17px;
+}
+
+.participant-bar-copy > small {
+  grid-column: 2;
+  color: #7d8881;
+  font-size: 11px;
+}
+
+.participant-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.participant-tab,
+.participant-reset-button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid #d2dbd5;
+  border-radius: 10px;
+  background: #fffdf8;
+  color: #557064;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.participant-tab.active {
+  border-color: #75a28b;
+  background: #edf5f0;
+  color: #24553e;
+}
+
+.participant-reset-button {
+  color: #8b5b55;
+}
+
+.participant-notice {
+  margin-bottom: 16px;
+}
+
+.participant-content-card {
+  padding: clamp(22px, 4vw, 34px);
+  border: 1px solid #dce2dd;
+  border-radius: 20px;
+  background: #fffdf8;
+}
+
+.participant-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.participant-section-heading h1 {
+  margin: 3px 0 6px;
+  color: #214c39;
+  font-size: clamp(25px, 4vw, 34px);
+  letter-spacing: -.03em;
+}
+
+.participant-section-heading p:last-child {
+  margin: 0;
+  color: #7d8881;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.participant-progress {
+  min-width: 86px;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  justify-content: center;
+  padding: 11px 12px;
+  border-radius: 13px;
+  background: #edf5f0;
+  color: #24553e;
+}
+
+.participant-progress strong {
+  font-size: 26px;
+}
+
+.participant-progress > span {
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.participant-progress small {
+  grid-column: 1 / -1;
+  margin-top: 1px;
+  color: #718177;
+  font-size: 9px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.portal-mission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.portal-mission-card {
+  min-height: 146px;
+  padding: 17px;
+  border: 1px solid #dce2dd;
+  border-radius: 16px;
+  background: #fff;
+  color: #40564a;
+  text-align: left;
+  cursor: pointer;
+  transition: .15s ease;
+}
+
+.portal-mission-card:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #84a895;
+  box-shadow: 0 8px 24px rgba(34, 76, 57, .06);
+}
+
+.portal-mission-card.submitted {
+  background: #f4f7f4;
+  cursor: default;
+}
+
+.portal-mission-card.disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.portal-mission-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.portal-mission-card h3 {
+  margin: 0 0 5px;
+  color: #214c39;
+  font-size: 16px;
+}
+
+.portal-mission-card p {
+  margin: 0;
+  color: #7a8580;
+  font-size: 12px;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.mission-submit-badge,
+.mission-open-badge,
+.mission-limit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.mission-submit-badge {
+  background: #e5f1e9;
+  color: #286149;
+}
+
+.mission-open-badge {
+  background: #f7f0d9;
+  color: #8a6b17;
+}
+
+.mission-limit-badge {
+  background: #eee;
+  color: #777;
+}
+
+.mission-status-line {
+  margin-top: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.mission-status-line.waiting {
+  color: #94731c;
+}
+
+.mission-status-line.checked {
+  color: #286149;
+}
+
+.portal-status-list {
+  display: grid;
+  gap: 9px;
+}
+
+.portal-status-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  padding: 14px 15px;
+  border: 1px solid #e1e5e2;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.portal-status-row > div {
+  display: grid;
+  gap: 3px;
+}
+
+.portal-status-row strong {
+  color: #214c39;
+  font-size: 14px;
+}
+
+.portal-status-row small {
+  color: #879089;
+  font-size: 10px;
+}
+
+.submit-content-card {
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.participant-back-button {
+  margin-bottom: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: transparent;
+  color: #557064;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.portal-success-card {
+  max-width: 650px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.portal-success-card h1 {
+  color: #214c39;
+  font-size: clamp(28px, 5vw, 40px);
+}
+
+@media (max-width: 760px) {
+  .participant-portal {
+    width: min(100% - 26px, 1180px);
+    padding-top: 18px;
+  }
+
+  .participant-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .participant-bar-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .participant-reset-button {
+    grid-column: 1 / -1;
+  }
+
+  .participant-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .participant-progress {
+    width: fit-content;
+  }
+
+  .portal-mission-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-status-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .portal-status-row .check-status {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
