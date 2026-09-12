@@ -1761,3 +1761,324 @@ input[type="date"].text-input { width:100%; min-width:0; box-sizing:border-box; 
     justify-self: start;
   }
 }
+
+
+/* ===== 첫 화면: 미션 안내형 랜딩페이지 ===== */
+.landing-guide-page {
+  width: min(1080px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: clamp(46px, 7vw, 78px) 0 72px;
+}
+
+.landing-guide-hero {
+  max-width: 760px;
+  margin: 0 auto 30px;
+  text-align: center;
+}
+
+.landing-guide-hero .eyebrow {
+  justify-content: center;
+}
+
+.landing-guide-hero h1 {
+  margin: 0;
+  color: #1c4a36;
+  font-size: clamp(42px, 6vw, 68px);
+  line-height: 1.04;
+  letter-spacing: -.045em;
+  word-break: keep-all;
+}
+
+.landing-guide-hero > p:last-child {
+  margin: 18px auto 0;
+  max-width: 620px;
+  color: #6f7d74;
+  font-size: 15px;
+  line-height: 1.75;
+  word-break: keep-all;
+}
+
+.landing-summary-card {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 28px;
+  padding: 18px;
+  border: 1px solid #d9e2dc;
+  border-radius: 18px;
+  background: #f7faf7;
+}
+
+.landing-summary-item {
+  display: grid;
+  gap: 5px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  background: #fffdf8;
+}
+
+.landing-summary-item span {
+  color: #718078;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.landing-summary-item strong {
+  color: #2b5742;
+  font-size: 13px;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.landing-summary-note {
+  grid-column: 1 / -1;
+  margin: 2px 2px 0;
+  color: #6f746f;
+  font-size: 12px;
+  text-align: center;
+  word-break: keep-all;
+}
+
+.landing-summary-note b {
+  color: #765c17;
+}
+
+.landing-mission-section {
+  margin-top: 34px;
+}
+
+.landing-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.landing-section-kicker {
+  color: #9b7820;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .13em;
+}
+
+.landing-section-heading h2,
+.landing-start-section h2 {
+  margin: 4px 0 5px;
+  color: #214c39;
+  font-size: clamp(24px, 3.4vw, 31px);
+  letter-spacing: -.025em;
+}
+
+.landing-section-heading p,
+.landing-start-section p {
+  margin: 0;
+  color: #7b867f;
+  font-size: 13px;
+  line-height: 1.65;
+  word-break: keep-all;
+}
+
+.landing-mission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.landing-mission-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 90px;
+  padding: 14px 16px;
+  border: 1px solid #dce2dd;
+  border-radius: 14px;
+  background: #fffdf8;
+}
+
+.landing-mission-number {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #edf5f0;
+  color: #2c654c;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.landing-mission-card strong {
+  color: #214c39;
+  font-size: 15px;
+}
+
+.landing-mission-card p {
+  margin: 5px 0 0;
+  color: #7a857f;
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.landing-proof-guide {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin: 22px 0 34px;
+  padding: 17px 18px;
+  border: 1px solid #cbdcd2;
+  border-radius: 15px;
+  background: #edf5f0;
+}
+
+.landing-proof-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #fffdf8;
+  color: #2c654c;
+}
+
+.landing-proof-guide strong {
+  color: #24533e;
+  font-size: 14px;
+}
+
+.landing-proof-guide p {
+  margin: 5px 0 0;
+  color: #566a5f;
+  font-size: 12px;
+  line-height: 1.65;
+  word-break: keep-all;
+}
+
+.landing-start-section {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+  gap: 28px;
+  align-items: center;
+  padding: 26px;
+  border-radius: 20px;
+  background: #f4f0e6;
+}
+
+.landing-start-actions {
+  display: grid;
+  gap: 9px;
+}
+
+.landing-start-primary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 78px;
+  padding: 16px 18px;
+  border-radius: 15px;
+  background: #285f49;
+  color: white;
+  text-decoration: none;
+}
+
+.landing-start-primary > span {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: rgba(255,255,255,.13);
+}
+
+.landing-start-primary strong {
+  display: block;
+  font-size: 17px;
+}
+
+.landing-start-primary small {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255,255,255,.78);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.landing-start-secondary {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 13px;
+  border: 1px solid #cbd5cf;
+  border-radius: 12px;
+  background: #fffdf8;
+  color: #4c675a;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.landing-start-secondary strong {
+  color: #285f49;
+}
+
+.landing-contact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px 12px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  color: #7b867f;
+  font-size: 11px;
+}
+
+.landing-contact > span {
+  color: #315f4a;
+  font-weight: 900;
+}
+
+.landing-contact > strong {
+  color: #53655b;
+}
+
+.landing-contact > a {
+  color: #1f5b42;
+  font-weight: 900;
+  text-decoration: none;
+}
+
+@media (max-width: 760px) {
+  .landing-guide-page {
+    width: min(100% - 28px, 1080px);
+    padding-top: 34px;
+  }
+
+  .landing-guide-hero h1 {
+    font-size: clamp(36px, 10.5vw, 50px);
+  }
+
+  .landing-summary-card,
+  .landing-mission-grid,
+  .landing-start-section {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-summary-note {
+    text-align: left;
+  }
+
+  .landing-start-section {
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .landing-contact {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
