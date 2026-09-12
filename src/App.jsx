@@ -592,6 +592,11 @@ function MissionSubmitPage() {
                   ✨ 작은 도전도 쌓이면 멋진 성장기록이 됩니다.<br />
                   <strong>내가 고른 미션으로 으뜸성장챌린지를 끝까지 완주해보세요!</strong>
                 </p>
+
+                <p>
+                  문의: 시흥시청소년수련관 청소년활동사업팀 031-315-1890(내선 1).</strong>
+                </p>
+
               </div>
             </details>
           </div>
