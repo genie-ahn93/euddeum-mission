@@ -1191,3 +1191,34 @@ input[type="date"].text-input { width:100%; min-width:0; box-sizing:border-box; 
     padding: 14px;
   }
 }
+
+
+/* 추가미션 문의 박스 */
+.notice-contact-box {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid #d7dfd9;
+  border-radius: 12px;
+  background: #f8faf7;
+  display: grid;
+  gap: 4px;
+}
+.notice-contact-label {
+  color: #315f4a;
+  font-size: 12px;
+  font-weight: 900;
+}
+.notice-contact-box strong {
+  color: #40564a;
+  font-size: 13px;
+}
+.notice-contact-box a {
+  width: fit-content;
+  color: #1f5b42;
+  font-size: 13px;
+  font-weight: 900;
+  text-decoration: none;
+}
+.notice-contact-box a:hover {
+  text-decoration: underline;
+}
