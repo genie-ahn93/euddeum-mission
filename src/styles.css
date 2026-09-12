@@ -1222,3 +1222,79 @@ input[type="date"].text-input { width:100%; min-width:0; box-sizing:border-box; 
 .notice-contact-box a:hover {
   text-decoration: underline;
 }
+
+
+/* ===== 문의처 모바일 가독성 최종 보정 ===== */
+.notice-contact-box {
+  margin-top: 20px !important;
+  padding: 14px 15px !important;
+  border: 1px solid #d8e1db !important;
+  border-radius: 12px !important;
+  background: #f5f8f5 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+}
+
+.notice-contact-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.notice-contact-label {
+  color: #2f604a !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  line-height: 1.4 !important;
+}
+
+.notice-contact-copy strong {
+  color: #53655b !important;
+  font-size: 11px !important;
+  line-height: 1.5 !important;
+  word-break: keep-all;
+}
+
+.notice-contact-phone {
+  flex: 0 0 auto;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid #b8ccbf;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #23563f !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  text-decoration: none !important;
+  white-space: nowrap;
+}
+
+.notice-contact-phone span {
+  font-size: 10px;
+  font-weight: 800;
+  color: #6e7c74;
+}
+
+.notice-contact-phone:hover {
+  background: #edf5f0;
+  text-decoration: none !important;
+}
+
+@media (max-width: 700px) {
+  .notice-contact-box {
+    align-items: stretch !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .notice-contact-phone {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
