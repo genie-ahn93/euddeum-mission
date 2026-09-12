@@ -1644,7 +1644,6 @@ function AdminDashboard({ session }) {
                   <th>상태</th>
                   <th>인증사진</th>
                   <th>내용</th>
-                  <th>비밀번호</th>
                 </tr>
               </thead>
               <tbody>
@@ -1698,16 +1697,6 @@ function AdminDashboard({ session }) {
                     <td>
                       <button className="admin-detail-button" type="button" onClick={() => setDetailRecord(record)}>
                         상세보기
-                      </button>
-                    </td>
-                    <td>
-                      <button
-                        className="admin-reset-button"
-                        type="button"
-                        onClick={() => openResetCode(record)}
-                        disabled={!record.birth_date || !record.level}
-                      >
-                        <RefreshCw size={14} /> 재설정
                       </button>
                     </td>
                   </tr>
@@ -1784,7 +1773,7 @@ function AdminDashboard({ session }) {
             <div className="admin-reset-heading">
               <span className="admin-reset-icon"><KeyRound size={21} /></span>
               <div>
-                <h2>비밀번호 재설정</h2>
+                <h2>{resetTarget.participant_name || '참가자'} 비밀번호 재설정</h2>
                 <p>{resetTarget.participant_name} · {resetTarget.birth_date || '생년월일 미입력'} · {resetTarget.level || '레벨 미입력'}</p>
               </div>
             </div>
@@ -1793,12 +1782,12 @@ function AdminDashboard({ session }) {
               <div className="issued-code-box">
                 <span>새 비밀번호</span>
                 <strong>{issuedCode}</strong>
-                <p>새 비밀번호를 참가자에게 전달해 주세요. 창을 닫으면 다시 확인할 수 없습니다.</p>
+                <p>이 새 비밀번호를 참가자에게 전달해 주세요. 해당 참가자의 모든 추가미션 확인에 동일하게 사용됩니다. 창을 닫으면 다시 확인할 수 없습니다.</p>
               </div>
             ) : (
               <>
                 <p className="admin-reset-guide">
-                  이 참가자가 제출한 모든 미션의 비밀번호가 새 비밀번호로 변경됩니다. 기존 비밀번호는 더 이상 사용할 수 없습니다.
+                  이 비밀번호는 해당 참가자가 제출한 모든 추가미션에 동일하게 적용됩니다. 변경 후 기존 비밀번호는 더 이상 사용할 수 없습니다.
                 </p>
                 <div className="reset-code-row">
                   <input
@@ -1851,11 +1840,22 @@ function AdminDashboard({ session }) {
               </div>
             </div>
 
-            <div className="admin-detail-tools">
-              <button className="admin-reset-button" type="button" onClick={() => openResetCode(detailRecord)}>
-                <RefreshCw size={14} /> 비밀번호 재설정
+            <div className="admin-detail-tools participant-password-tools">
+              <div className="participant-password-copy">
+                <span className="participant-password-label">참가자 비밀번호</span>
+                <small>
+                  이 비밀번호는 <strong>{detailRecord.participant_name || '해당 참가자'}</strong>가 제출한
+                  모든 추가미션에 동일하게 적용됩니다.
+                </small>
+              </div>
+              <button
+                className="admin-reset-button participant-password-button"
+                type="button"
+                onClick={() => openResetCode(detailRecord)}
+                disabled={!detailRecord.birth_date || !detailRecord.level}
+              >
+                <KeyRound size={14} /> 참가자 비밀번호 재설정
               </button>
-              <small>기존 비밀번호는 표시하지 않습니다. 필요할 때 새 비밀번호로 재설정할 수 있습니다.</small>
             </div>
 
             <div className="admin-detail-answers">
