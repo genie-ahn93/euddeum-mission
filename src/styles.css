@@ -1110,3 +1110,84 @@ input[type="date"].text-input { width:100%; min-width:0; box-sizing:border-box; 
   .admin-toolbar-actions .danger-button { width:100%; }
   .admin-clear-actions { grid-template-columns:1fr; }
 }
+
+
+/* ===== 2026 추가미션 안내 / 공통 인증안내 최종 보완 ===== */
+.notice-period {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 7px;
+  align-items: baseline;
+  color: #66776e;
+}
+
+.notice-key-info {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 18px;
+}
+
+.notice-key-info > div {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: #f6f7f2;
+}
+
+.notice-key-info span {
+  color: #718078;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.notice-key-info strong {
+  color: #2d5543;
+  font-size: 13px;
+  word-break: keep-all;
+}
+
+.common-proof-notice {
+  margin: 18px 0 12px;
+  padding: 16px 17px;
+  border: 1px solid #cbdcd2;
+  border-radius: 14px;
+  background: #edf5f0;
+}
+
+.common-proof-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #24533e;
+}
+
+.common-proof-title strong {
+  font-size: 14px;
+}
+
+.common-proof-notice p {
+  margin: 5px 0 0;
+  color: #566a5f;
+  font-size: 12px;
+  line-height: 1.65;
+  word-break: keep-all;
+}
+
+.common-proof-notice b {
+  color: #24533e;
+}
+
+@media (max-width: 700px) {
+  .notice-key-info > div {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .common-proof-notice {
+    padding: 14px;
+  }
+}
