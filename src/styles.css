@@ -2178,3 +2178,62 @@ input[type="date"].text-input { width:100%; min-width:0; box-sizing:border-box; 
     justify-content: center;
   }
 }
+
+
+/* ===== 참가자 상세 비밀번호 영역 여백 보정 ===== */
+.participant-password-tools {
+  align-items: flex-start !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  padding: 16px 17px !important;
+}
+
+.participant-password-copy {
+  width: 100%;
+  gap: 6px !important;
+}
+
+.participant-password-label {
+  display: block;
+  font-size: 13px !important;
+}
+
+.participant-password-copy small {
+  display: block;
+  width: 100%;
+  font-size: 11px !important;
+  line-height: 1.7 !important;
+}
+
+.participant-password-button {
+  align-self: flex-start;
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+/* ===== 등록 참여자 확인 안내 ===== */
+.participant-roster-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding: 11px 13px;
+  border: 1px solid #cfe0d6;
+  border-radius: 11px;
+  background: #f1f7f3;
+  color: #35634e;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.participant-login-desc strong {
+  color: #2d5b45;
+}
+
+@media (max-width: 700px) {
+  .participant-password-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
