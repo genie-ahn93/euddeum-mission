@@ -227,27 +227,50 @@ async function makeVerificationHash(name, birthDate, level, checkCode) {
 function App() {
   const path = window.location.pathname
   if (path.startsWith('/admin')) return <AdminPage />
-  if (path.startsWith('/check')) return <SubmissionCheckPage />
-  if (path.startsWith('/submit')) return <MissionSubmitPage />
+  if (path.startsWith('/check')) return <ParticipantPortal initialView="status" />
+  if (path.startsWith('/submit')) return <ParticipantPortal initialView="missions" />
   return <LandingPage />
 }
 
-function MissionSubmitPage() {
-  const [step, setStep] = useState(1)
+function ParticipantPortal({ initialView = 'missions' }) {
+  const SESSION_KEY = 'euddeum-participant-session'
+
+  const [identity, setIdentity] = useState({
+    name: '',
+    birthDate: '',
+    level: '',
+    password: '',
+  })
+  const [participant, setParticipant] = useState(null)
+  const [view, setView] = useState(initialView)
   const [selectedMissionId, setSelectedMissionId] = useState(null)
-  const [form, setForm] = useState(INITIAL_FORM)
+  const [submissionForm, setSubmissionForm] = useState({
+    activityDate: new Date().toISOString().slice(0, 10),
+    answers: ['', '', ''],
+    consent: false,
+  })
   const [photos, setPhotos] = useState([])
   const [previews, setPreviews] = useState([])
-  const [error, setError] = useState('')
+  const [submissions, setSubmissions] = useState([])
+  const [loadingSession, setLoadingSession] = useState(true)
+  const [loadingStatus, setLoadingStatus] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isProcessingPhotos, setIsProcessingPhotos] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
-  const [showIdentityConfirm, setShowIdentityConfirm] = useState(false)
+  const [error, setError] = useState('')
+  const [submittedMissionId, setSubmittedMissionId] = useState(null)
 
   const mission = useMemo(
     () => MISSIONS.find((item) => item.id === selectedMissionId) ?? null,
     [selectedMissionId],
   )
+
+  const submissionsByMission = useMemo(() => {
+    const map = new Map()
+    submissions.forEach((row) => map.set(Number(row.mission_id), row))
+    return map
+  }, [submissions])
+
+  const completedCount = submissionsByMission.size
 
   useEffect(() => {
     const urls = photos.map((file) => URL.createObjectURL(file))
@@ -255,13 +278,57 @@ function MissionSubmitPage() {
     return () => urls.forEach((url) => URL.revokeObjectURL(url))
   }, [photos])
 
-  const setField = (key, value) => {
-    setForm((prev) => ({ ...prev, [key]: value }))
+  const fetchMySubmissions = async (session = participant) => {
+    if (!session?.verificationHash) return []
+    setLoadingStatus(true)
+    try {
+      const { data, error: lookupError } = await supabase.rpc('lookup_my_submissions', {
+        p_hash: session.verificationHash,
+      })
+      if (lookupError) throw lookupError
+      const rows = data ?? []
+      setSubmissions(rows)
+      return rows
+    } catch (err) {
+      console.error('제출현황 확인 오류:', err)
+      setError('제출현황을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.')
+      return []
+    } finally {
+      setLoadingStatus(false)
+    }
+  }
+
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(SESSION_KEY)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (
+          parsed?.name &&
+          parsed?.birthDate &&
+          parsed?.level &&
+          parsed?.participantKey &&
+          parsed?.verificationHash
+        ) {
+          setParticipant(parsed)
+          fetchMySubmissions(parsed)
+        }
+      }
+    } catch (err) {
+      console.warn('참가자 세션 복원 오류:', err)
+      sessionStorage.removeItem(SESSION_KEY)
+    } finally {
+      setLoadingSession(false)
+    }
+  }, [])
+
+  const setIdentityField = (key, value) => {
+    setIdentity((prev) => ({ ...prev, [key]: value }))
     setError('')
   }
 
   const setAnswer = (index, value) => {
-    setForm((prev) => {
+    setSubmissionForm((prev) => {
       const next = [...prev.answers]
       next[index] = value
       return { ...prev, answers: next }
@@ -269,39 +336,106 @@ function MissionSubmitPage() {
     setError('')
   }
 
-  const goToStep2 = () => {
-    if (!mission) {
-      setError('먼저 도전할 미션을 선택해주세요.')
-      return
-    }
+  const loginParticipant = async (event) => {
+    event.preventDefault()
     setError('')
-    setStep(2)
+
+    if (!identity.name.trim()) return setError('이름을 입력해주세요.')
+    if (!identity.birthDate) return setError('생년월일을 입력해주세요.')
+    if (!LEVELS.includes(identity.level)) return setError('참여 레벨을 선택해주세요.')
+    if (!/^\d{6}$/.test(identity.password)) return setError('비밀번호를 숫자 6자리로 입력해주세요.')
+
+    setLoadingStatus(true)
+    try {
+      const participantKey = await makeParticipantKey(
+        identity.name,
+        identity.birthDate,
+        identity.level,
+      )
+      const verificationHash = await makeVerificationHash(
+        identity.name,
+        identity.birthDate,
+        identity.level,
+        identity.password,
+      )
+
+      const { data: accessState, error: accessError } = await supabase.rpc(
+        'validate_participant_access',
+        {
+          p_participant_key: participantKey,
+          p_hash: verificationHash,
+        },
+      )
+
+      if (accessError) throw accessError
+
+      if (accessState === 'invalid') {
+        setError('기존 제출내역과 비밀번호가 일치하지 않습니다. 비밀번호를 다시 확인해주세요.')
+        return
+      }
+
+      const session = {
+        name: identity.name.trim(),
+        birthDate: identity.birthDate,
+        level: identity.level,
+        participantKey,
+        verificationHash,
+      }
+
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session))
+      setParticipant(session)
+
+      const { data, error: lookupError } = await supabase.rpc('lookup_my_submissions', {
+        p_hash: verificationHash,
+      })
+      if (lookupError) throw lookupError
+      setSubmissions(data ?? [])
+    } catch (err) {
+      console.error('참가자 정보 확인 오류:', err)
+      setError('정보를 확인하지 못했습니다. 잠시 후 다시 시도해주세요.')
+    } finally {
+      setLoadingStatus(false)
+    }
   }
 
-  const goToStep3 = () => {
-    if (!form.name.trim()) {
-      setError('이름을 입력해주세요.')
-      return
-    }
-    if (!form.birthDate) {
-      setError('생년월일을 입력해주세요.')
-      return
-    }
-    if (!LEVELS.includes(form.level)) {
-      setError('참여 레벨을 선택해주세요.')
-      return
-    }
-    if (!/^\d{6}$/.test(form.checkCode)) {
-      setError('비밀번호를 숫자 6자리로 입력해주세요.')
-      return
-    }
+  const logoutParticipant = () => {
+    sessionStorage.removeItem(SESSION_KEY)
+    setParticipant(null)
+    setIdentity({ name: '', birthDate: '', level: '', password: '' })
+    setSubmissions([])
+    setSelectedMissionId(null)
+    setSubmissionForm({
+      activityDate: new Date().toISOString().slice(0, 10),
+      answers: ['', '', ''],
+      consent: false,
+    })
+    setPhotos([])
+    setSubmittedMissionId(null)
+    setView(initialView)
     setError('')
-    setShowIdentityConfirm(true)
   }
 
-  const confirmIdentity = () => {
-    setShowIdentityConfirm(false)
-    setStep(3)
+  const openMission = (missionId) => {
+    if (submissionsByMission.has(missionId)) return
+    setSelectedMissionId(missionId)
+    setSubmissionForm({
+      activityDate: new Date().toISOString().slice(0, 10),
+      answers: ['', '', ''],
+      consent: false,
+    })
+    setPhotos([])
+    setSubmittedMissionId(null)
+    setError('')
+    setView('submit')
+  }
+
+  const backToMissions = async () => {
+    setSelectedMissionId(null)
+    setPhotos([])
+    setError('')
+    setSubmittedMissionId(null)
+    await fetchMySubmissions()
+    setView('missions')
   }
 
   const handleFiles = async (event) => {
@@ -333,7 +467,6 @@ function MissionSubmitPage() {
       for (const file of targets) {
         compressed.push(await compressImage(file))
       }
-
       setPhotos((prev) => [...prev, ...compressed].slice(0, 3))
     } catch (err) {
       console.error('이미지 압축 오류:', err)
@@ -349,28 +482,24 @@ function MissionSubmitPage() {
 
   const validateSubmission = () => {
     if (!mission) return '미션을 선택해주세요.'
-    if (!form.activityDate) return '활동일을 선택해주세요.'
-    if (form.answers.some((answer) => !answer.trim())) return '질문 3개에 모두 답해주세요.'
+    if (!submissionForm.activityDate) return '활동일을 선택해주세요.'
+    if (submissionForm.answers.some((answer) => !answer.trim())) return '질문 3개에 모두 답해주세요.'
     if (photos.length > 3) return '인증사진은 최대 3장까지 업로드할 수 있어요.'
 
     if (photos.length < mission.minPhotos) {
-      if (mission.id === 3) {
-        return '걸음 수가 확인되는 앱 화면 캡처와 본인 활동사진을 각각 1장씩 업로드해주세요.'
-      }
-      if (mission.id === 4) {
-        return '본인 활동사진 1장과 수거한 쓰레기 사진 1장을 업로드해주세요.'
-      }
-      if (mission.id === 8) {
-        return '문제 상황 사진 1장과 본인 활동사진 1장을 업로드해주세요.'
-      }
+      if (mission.id === 3) return '걸음 수가 확인되는 앱 화면 캡처와 본인 활동사진을 각각 1장씩 업로드해주세요.'
+      if (mission.id === 4) return '본인 활동사진 1장과 수거한 쓰레기 사진 1장을 업로드해주세요.'
+      if (mission.id === 8) return '문제 상황 사진 1장과 본인 활동사진 1장을 업로드해주세요.'
       return '참여자 본인의 얼굴이 포함된 활동사진을 최소 1장 업로드해주세요.'
     }
-    if (!form.consent) return '개인정보 및 인증자료 제출 안내에 동의해주세요.'
+
+    if (!submissionForm.consent) return '개인정보 및 인증자료 제출 안내에 동의해주세요.'
     return ''
   }
 
   const handleSubmit = async () => {
-    if (isSubmitting || isProcessingPhotos) return
+    if (!participant || isSubmitting || isProcessingPhotos) return
+
     const validationError = validateSubmission()
     if (validationError) {
       setError(validationError)
@@ -381,34 +510,38 @@ function MissionSubmitPage() {
     setError('')
 
     try {
-      const participantKey = await makeParticipantKey(
-        form.name,
-        form.birthDate,
-        form.level,
+      // 관리자에게 비밀번호가 재설정된 경우, 오래 열린 화면에서 예전 비밀번호로
+      // 새 제출이 생기지 않도록 제출 직전에 다시 확인합니다.
+      const { data: accessState, error: accessError } = await supabase.rpc(
+        'validate_participant_access',
+        {
+          p_participant_key: participant.participantKey,
+          p_hash: participant.verificationHash,
+        },
       )
 
-      // 사진을 올리기 전에 동일 참가자 + 동일 미션 중복 여부를 먼저 확인합니다.
+      if (accessError) throw accessError
+      if (accessState === 'invalid') {
+        sessionStorage.removeItem(SESSION_KEY)
+        setParticipant(null)
+        setError('비밀번호가 변경되었습니다. 새 비밀번호로 다시 로그인해주세요.')
+        return
+      }
+
       const { data: duplicate, error: duplicateCheckError } = await supabase.rpc(
         'check_duplicate_submission',
         {
-          p_participant_key: participantKey,
+          p_participant_key: participant.participantKey,
           p_mission_id: mission.id,
         },
       )
 
       if (duplicateCheckError) throw duplicateCheckError
-
       if (duplicate === true) {
-        setError('이미 제출한 미션입니다. 같은 미션은 중복 제출할 수 없어요.')
+        await fetchMySubmissions()
+        setError('이미 제출한 미션입니다.')
         return
       }
-
-      const verificationHash = await makeVerificationHash(
-        form.name,
-        form.birthDate,
-        form.level,
-        form.checkCode,
-      )
 
       const uploadedPaths = []
 
@@ -427,26 +560,34 @@ function MissionSubmitPage() {
       }
 
       const { error: insertError } = await supabase.from('submissions').insert({
-        participant_name: form.name.trim(),
-        birth_date: form.birthDate,
-        level: form.level,
-        participant_key: participantKey,
-        verification_hash: verificationHash,
+        participant_name: participant.name,
+        birth_date: participant.birthDate,
+        level: participant.level,
+        participant_key: participant.participantKey,
+        verification_hash: participant.verificationHash,
         mission_id: mission.id,
-        activity_date: form.activityDate,
-        answer_1: form.answers[0].trim(),
-        answer_2: form.answers[1].trim(),
-        answer_3: form.answers[2].trim(),
+        activity_date: submissionForm.activityDate,
+        answer_1: submissionForm.answers[0].trim(),
+        answer_2: submissionForm.answers[1].trim(),
+        answer_3: submissionForm.answers[2].trim(),
         comment: null,
         photo_paths: JSON.stringify(uploadedPaths),
         status: '접수',
       })
 
       if (insertError) throw insertError
-      setSubmitted(true)
+
+      setSubmittedMissionId(mission.id)
+      await fetchMySubmissions()
+      setPhotos([])
+      setSubmissionForm({
+        activityDate: new Date().toISOString().slice(0, 10),
+        answers: ['', '', ''],
+        consent: false,
+      })
+      setView('success')
     } catch (err) {
       console.error('추가미션 제출 오류:', err)
-
       const message = String(err?.message ?? '')
       if (message.includes('DUPLICATE_MISSION') || err?.code === '23505') {
         setError('이미 제출한 미션입니다. 같은 미션은 중복 제출할 수 없어요.')
@@ -460,217 +601,38 @@ function MissionSubmitPage() {
     }
   }
 
-  const resetAll = () => {
-    setStep(1)
-    setSelectedMissionId(null)
-    setForm(INITIAL_FORM)
-    setPhotos([])
-    setError('')
-    setSubmitted(false)
-    setShowIdentityConfirm(false)
-  }
-
-  if (submitted) {
+  if (loadingSession) {
     return (
       <div className="site-shell">
         <Header />
-        <main className="success-wrap">
-          <section className="success-card">
-            <div className="success-icon"><Check size={34} strokeWidth={2.3} /></div>
-            <p className="eyebrow">MISSION COMPLETE</p>
-            <h1>추가미션 인증이 접수되었습니다!</h1>
-            <p>담당자 확인 후 점수에 반영됩니다.</p>
-
-            <div className="success-code-box">
-              <span>내 비밀번호</span>
-              <strong>{form.checkCode}</strong>
-              <p>제출현황 확인에 필요한 비밀번호예요. 다른 미션을 제출할 때도 같은 비밀번호를 사용해 주세요. 잊지 않도록 이 화면을 캡처해두는 것을 권장합니다.</p>
-            </div>
-
-            <div className="success-actions">
-              <button className="primary-button success-button" onClick={resetAll}>
-                다른 미션 도전하기 <ArrowRight size={18} />
-              </button>
-              <a className="ghost-button success-link" href="/check">
-                제출 확인하기 <ClipboardCheck size={18} />
-              </a>
-            </div>
-          </section>
+        <main className="participant-loading">
+          <Loader2 className="spin" size={28} />
+          <p>참가자 정보를 확인하고 있어요.</p>
         </main>
       </div>
     )
   }
 
-  return (
-    <div className="site-shell">
-      <Header />
-      <main className="page-grid">
-        <aside className="intro-panel">
-          <div>
-            <p className="eyebrow"><Sparkles size={15} /> EXTRA MISSION</p>
-            <h1 className="hero-title">
-              <span className="desktop-title">
-                시흥시<br />
-                으뜸성장챌린지<br />
-                추가미션
-              </span>
-              <span className="mobile-title">
-                시흥시<br />
-                으뜸성장챌린지<br />
-                추가미션
-              </span>
-            </h1>
-            <details className="score-notice" open={false}>
-              <summary>
-                <span className="notice-summary-text">
-                  <strong className="notice-open">🎯 추가미션 OPEN!</strong>
-                  <span className="notice-period">인증기간 <b>2026. 9. 18.(금) ~ 10. 19.(월)</b></span>
-                  <span className="score-lines">
-                    <span>미션 1개 완료 시 <b>+2점</b>,</span>
-                    <span>최대 5개 참여 시 <b>총 +10점</b></span>
-                  </span>
-                  <span>
-                    추가미션 점수는 <strong>플랫폼에 실시간 반영되지 않으며</strong>,
-                    으뜸성장보고회 종료 후 활동비 지급 시 기존 활동점수에 합산됩니다.
-                  </span>
-                  <span>
-                    단, <strong>1~2위 상위 활동비 순위 산정에는 반영되지 않습니다.</strong>
-                  </span>
-                </span>
-                <span className="notice-more">자세히 보기</span>
-              </summary>
+  if (!participant) {
+    return (
+      <div className="site-shell">
+        <Header />
+        <main className="participant-login-page">
+          <section className="participant-login-card">
+            <p className="eyebrow"><ShieldCheck size={15} /> PARTICIPANT</p>
+            <h1>{initialView === 'status' ? '내 제출현황 확인' : '추가미션 참여하기'}</h1>
+            <p className="participant-login-desc">
+              한 번 정보를 입력하면 이 화면을 사용하는 동안 다시 입력하지 않아도 돼요.
+              브라우저를 닫거나 '내 정보 초기화'를 누르면 정보가 사라집니다.
+            </p>
 
-              <div className="notice-detail">
-                <p>
-                  <strong>으뜸성장챌린지, 아직 끝난 거 아니죠? 😎</strong><br />
-                  지속적인 참여를 응원하기 위한 <b>추가미션</b>이 열렸습니다!
-                </p>
-
-                <p>
-                  일상 속에서 내가 할 수 있는 작은 도전을 직접 고르고, 하나씩 실천하며
-                  <strong> 나만의 성장경험을 더 채워보세요! 🌱</strong>
-                </p>
-
-                <div className="notice-key-info">
-                  <div><span>📅 인증기간</span><strong>2026. 9. 18.(금) ~ 10. 19.(월)</strong></div>
-                  <div><span>⭐ 참여점수</span><strong>미션 1개 완료 시 +2점</strong></div>
-                  <div><span>🙌 최대 참여</span><strong>5개 미션 · 총 +10점</strong></div>
-                </div>
-
-                <p className="mission-flow"><strong>도전하고 → 인증하고 → 성장점수까지 GET!</strong></p>
-
-                <div className="notice-divider" />
-                <p className="notice-subtitle">💡 추가점수는 이렇게 적용돼요!</p>
-
-                <p>
-                  추가미션 점수는 <strong>활동비 지급을 위한 추가점수</strong>로,
-                  <strong> 플랫폼에는 실시간 반영되지 않습니다.</strong>
-                </p>
-
-                <p>
-                  추가미션 인증기간과 으뜸성장보고회까지 모든 활동이 마무리된 후,
-                  <strong> 활동비 지급 시 기존 활동점수에 추가미션 점수를 합산하여 최종 점수를 산정</strong>합니다.
-                </p>
-
-                <p>
-                  다만, <strong>점수 순위에 따라 지급되는 1~2위 상위 활동비 산정에는 추가미션 점수가 포함되지 않습니다.</strong>
-                </p>
-
-                <div className="notice-example">
-                  <strong>예시 👀</strong>
-                  <span>기존 활동점수 <b>55점</b> + 추가미션 <b>10점</b> = 최종 <b>65점</b></span>
-                  <span>✅ <b>기본 활동비 10만원 수여 가능</b></span>
-                  <span>❌ 1~2위 순위 산정 시에는 추가미션 점수를 제외한 <b>기존 활동점수 55점</b>을 기준으로 산정</span>
-                </div>
-
-                <p>
-                  따라서 추가미션 점수를 포함한 최종 점수가 높더라도
-                  <strong> 1위 40만원 / 2위 30만원의 상위 활동비 대상 산정에는 반영되지 않습니다.</strong>
-                </p>
-
-                <p className="notice-closing">
-                  ✨ 작은 도전도 쌓이면 멋진 성장기록이 됩니다.<br />
-                  <strong>내가 고른 미션으로 으뜸성장챌린지를 끝까지 완주해보세요!</strong>
-                </p>
-
-                <div className="notice-contact-box">
-                  <div className="notice-contact-header">☎ 추가미션 참여 문의</div>
-                  <div className="notice-contact-org">시흥시청소년수련관 청소년활동사업팀</div>
-                  <a className="notice-contact-phone" href="tel:0313151890">
-                    031-315-1890 <span>(내선 1)</span>
-                  </a>
-                </div>
-              </div>
-            </details>
-          </div>
-          <div className="intro-footnote">
-            작은 도전을 선택하고, 기록하고, 인증해보세요.
-          </div>
-        </aside>
-
-        <section className="form-panel">
-          <Stepper step={step} />
-
-          {step === 1 && (
-            <div className="step-content">
-              <div className="section-heading">
-                <span>STEP 1</span>
-                <h2>도전할 미션을 선택해주세요</h2>
-                <p>총 8개의 추가미션 중 하나를 선택하세요.</p>
-              </div>
-
-              <div className="mission-grid">
-                {MISSIONS.map((item) => {
-                  const active = selectedMissionId === item.id
-                  return (
-                    <button
-                      type="button"
-                      key={item.id}
-                      className={`mission-card ${active ? 'active' : ''}`}
-                      onClick={() => {
-                        setSelectedMissionId(item.id)
-                        setError('')
-                      }}
-                    >
-                      <span className="mission-number">{String(item.id).padStart(2, '0')}</span>
-                      <div>
-                        <h3>{item.title}</h3>
-                        <p>{item.summary}</p>
-                      </div>
-                      {active && <Check className="mission-check" size={20} />}
-                    </button>
-                  )
-                })}
-              </div>
-
-              {error && <ErrorBox message={error} />}
-              <div className="action-row right">
-                <button className="primary-button" onClick={goToStep2}>
-                  다음 <ArrowRight size={18} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="step-content narrow">
-              <div className="section-heading">
-                <span>STEP 2</span>
-                <h2>참가자 정보를 입력해주세요</h2>
-                <p>인증 확인을 위한 기본 정보입니다.</p>
-              </div>
-
-              <div className="selected-mission-strip">
-                <span>{String(mission?.id).padStart(2, '0')}</span>
-                <div><strong>{mission?.title}</strong><small>{mission?.summary}</small></div>
-              </div>
-
+            <form onSubmit={loginParticipant} className="participant-login-form">
               <label className="field-label">
                 <span className="field-title">이름 <em>*</em></span>
                 <input
                   className="text-input"
-                  value={form.name}
-                  onChange={(e) => setField('name', e.target.value)}
+                  value={identity.name}
+                  onChange={(e) => setIdentityField('name', e.target.value)}
                   placeholder="이름을 입력해주세요"
                   autoComplete="name"
                 />
@@ -681,200 +643,361 @@ function MissionSubmitPage() {
                 <input
                   className="text-input"
                   type="date"
-                  value={form.birthDate}
-                  onChange={(e) => setField('birthDate', e.target.value)}
-                  aria-label="생년월일"
+                  value={identity.birthDate}
+                  onChange={(e) => setIdentityField('birthDate', e.target.value)}
                 />
-                <small className="field-help">기존 으뜸성장챌린지 참여자 확인을 위해 사용됩니다.</small>
               </label>
 
               <label className="field-label">
                 <span className="field-title">참여 레벨 <em>*</em></span>
                 <select
                   className="text-input select-input"
-                  value={form.level}
-                  onChange={(e) => setField('level', e.target.value)}
+                  value={identity.level}
+                  onChange={(e) => setIdentityField('level', e.target.value)}
                 >
                   <option value="">레벨을 선택해주세요</option>
-                  {LEVELS.map((level) => (
-                    <option key={level} value={level}>{level}</option>
-                  ))}
+                  {LEVELS.map((level) => <option key={level} value={level}>{level}</option>)}
                 </select>
               </label>
 
               <label className="field-label">
                 <span className="field-title">비밀번호 <em>*</em></span>
-                <input
-                  className="text-input"
-                  value={form.checkCode}
-                  onChange={(e) => setField('checkCode', e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="숫자 6자리를 입력해주세요"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  maxLength={6}
-                />
+                <div className="check-code-input-wrap">
+                  <KeyRound size={18} />
+                  <input
+                    className="text-input"
+                    value={identity.password}
+                    onChange={(e) => setIdentityField('password', e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="숫자 6자리"
+                    inputMode="numeric"
+                    maxLength={6}
+                    autoComplete="off"
+                  />
+                </div>
                 <small className="field-help field-help-important">
-                  처음 제출하는 경우 사용할 숫자 6자리를 직접 정해 주세요.<br />이미 추가미션을 제출한 적이 있다면 <strong>이전에 사용한 것과 같은 비밀번호</strong>를 입력해 주세요.
+                  처음 참여하는 경우 사용할 숫자 6자리를 직접 정해 주세요.
+                  이미 제출한 미션이 있다면 <strong>기존에 사용한 비밀번호</strong>를 입력해 주세요.
                 </small>
               </label>
 
               {error && <ErrorBox message={error} />}
-              <div className="action-row split">
-                <button className="ghost-button" onClick={() => { setStep(1); setError('') }}>
-                  <ArrowLeft size={18} /> 이전
-                </button>
-                <button className="primary-button" onClick={goToStep3}>
-                  다음 <ArrowRight size={18} />
-                </button>
+
+              <button className="primary-button participant-login-button" disabled={loadingStatus}>
+                {loadingStatus
+                  ? <><Loader2 size={18} className="spin" /> 확인 중...</>
+                  : <><ArrowRight size={18} /> 시작하기</>}
+              </button>
+            </form>
+
+            <a href="/" className="admin-back-link">처음 화면으로 돌아가기</a>
+          </section>
+        </main>
+      </div>
+    )
+  }
+
+  const participantHeader = (
+    <section className="participant-bar">
+      <div className="participant-bar-copy">
+        <span>참가자</span>
+        <strong>{participant.name}</strong>
+        <small>{participant.birthDate} · {participant.level}</small>
+      </div>
+      <div className="participant-bar-actions">
+        <button
+          className={`participant-tab ${view === 'missions' || view === 'submit' || view === 'success' ? 'active' : ''}`}
+          onClick={() => { setView('missions'); setSelectedMissionId(null); setError('') }}
+        >
+          <Play size={15} /> 미션
+        </button>
+        <button
+          className={`participant-tab ${view === 'status' ? 'active' : ''}`}
+          onClick={async () => { await fetchMySubmissions(); setView('status'); setError('') }}
+        >
+          <ClipboardCheck size={15} /> 제출현황
+        </button>
+        <button className="participant-reset-button" onClick={logoutParticipant}>
+          <LogOut size={15} /> 내 정보 초기화
+        </button>
+      </div>
+    </section>
+  )
+
+  const missionNotice = (
+    <details className="score-notice participant-notice">
+      <summary>
+        <span className="notice-summary-text">
+          <strong className="notice-open">🎯 추가미션 OPEN!</strong>
+          <span className="notice-period">인증기간 <b>2026. 9. 18.(금) ~ 10. 19.(월)</b></span>
+          <span className="score-lines">
+            <span>미션 1개 완료 시 <b>+2점</b>,</span>
+            <span>최대 5개 참여 시 <b>총 +10점</b></span>
+          </span>
+          <span>추가미션 점수는 <strong>플랫폼에 실시간 반영되지 않으며</strong>, 활동비 지급 시 기존 활동점수에 합산됩니다.</span>
+        </span>
+        <span className="notice-more">자세히 보기</span>
+      </summary>
+
+      <div className="notice-detail">
+        <div className="notice-key-info">
+          <div><span>📅 인증기간</span><strong>2026. 9. 18.(금) ~ 10. 19.(월)</strong></div>
+          <div><span>⭐ 참여점수</span><strong>미션 1개 완료 시 +2점</strong></div>
+          <div><span>🙌 최대 참여</span><strong>5개 미션 · 총 +10점</strong></div>
+        </div>
+
+        <p className="notice-subtitle">💡 추가점수는 이렇게 적용돼요!</p>
+        <p>추가미션 점수는 <strong>활동비 지급을 위한 추가점수</strong>로, <strong>플랫폼에는 실시간 반영되지 않습니다.</strong></p>
+        <p>으뜸성장보고회까지 모든 활동이 마무리된 후, <strong>활동비 지급 시 기존 활동점수에 합산하여 최종 점수를 산정</strong>합니다.</p>
+        <p>단, <strong>1~2위 상위 활동비 순위 산정에는 추가미션 점수가 포함되지 않습니다.</strong></p>
+
+        <div className="notice-contact-box">
+          <div className="notice-contact-header">☎ 추가미션 참여 문의</div>
+          <div className="notice-contact-org">시흥시청소년수련관 청소년활동사업팀</div>
+          <a className="notice-contact-phone" href="tel:0313151890">031-315-1890 <span>(내선 1)</span></a>
+        </div>
+      </div>
+    </details>
+  )
+
+  return (
+    <div className="site-shell">
+      <Header />
+      <main className="participant-portal">
+        {participantHeader}
+        {missionNotice}
+
+        {view === 'missions' && (
+          <section className="participant-content-card">
+            <div className="participant-section-heading">
+              <div>
+                <p className="eyebrow"><Sparkles size={15} /> MY MISSIONS</p>
+                <h1>도전할 미션을 선택해주세요</h1>
+                <p>제출한 미션은 다시 제출할 수 없으며, 현재 상태도 바로 확인할 수 있어요.</p>
+              </div>
+              <div className="participant-progress">
+                <strong>{completedCount}</strong><span>/ 5</span>
+                <small>참여 미션</small>
               </div>
             </div>
-          )}
 
-          {showIdentityConfirm && (
-            <div className="identity-confirm-modal" role="dialog" aria-modal="true" onClick={() => setShowIdentityConfirm(false)}>
-              <div className="identity-confirm-card" onClick={(event) => event.stopPropagation()}>
-                <button className="photo-modal-close" onClick={() => setShowIdentityConfirm(false)} aria-label="닫기"><X size={20} /></button>
-                <div className="identity-confirm-icon"><ShieldCheck size={24} /></div>
-                <h3>참가자 정보가 맞나요?</h3>
-                <p>생년월일이 잘못 입력되면 기존 참여자 확인과 제출현황 조회가 어려울 수 있어요.</p>
+            <div className="portal-mission-grid">
+              {MISSIONS.map((item) => {
+                const submitted = submissionsByMission.get(item.id)
+                const checked = submitted?.status === '확인'
+                const maxReached = completedCount >= 5 && !submitted
 
-                <div className="identity-confirm-grid">
-                  <div><span>이름</span><strong>{form.name.trim()}</strong></div>
-                  <div><span>생년월일</span><strong>{form.birthDate}</strong></div>
-                  <div><span>참여 레벨</span><strong>{form.level}</strong></div>
-                </div>
+                return (
+                  <button
+                    type="button"
+                    key={item.id}
+                    className={`portal-mission-card ${submitted ? 'submitted' : ''} ${maxReached ? 'disabled' : ''}`}
+                    disabled={Boolean(submitted) || maxReached}
+                    onClick={() => openMission(item.id)}
+                  >
+                    <div className="portal-mission-top">
+                      <span className="mission-number">{String(item.id).padStart(2, '0')}</span>
+                      {submitted ? (
+                        <span className="mission-submit-badge"><Check size={14} /> 제출완료</span>
+                      ) : maxReached ? (
+                        <span className="mission-limit-badge">최대 5개 완료</span>
+                      ) : (
+                        <span className="mission-open-badge">도전하기</span>
+                      )}
+                    </div>
 
-                <div className="identity-confirm-actions">
-                  <button className="ghost-button" type="button" onClick={() => setShowIdentityConfirm(false)}>
-                    다시 확인하기
+                    <h3>{item.title}</h3>
+                    <p>{item.summary}</p>
+
+                    {submitted && (
+                      <div className={`mission-status-line ${checked ? 'checked' : 'waiting'}`}>
+                        {checked ? <Check size={14} /> : <Loader2 size={14} />}
+                        {checked ? '담당자 미션 확인' : '접수 완료 · 확인 대기'}
+                      </div>
+                    )}
                   </button>
-                  <button className="primary-button" type="button" onClick={confirmIdentity}>
-                    맞아요, 계속하기 <ArrowRight size={17} />
-                  </button>
-                </div>
-              </div>
+                )
+              })}
             </div>
-          )}
+          </section>
+        )}
 
-          {step === 3 && mission && (
-            <div className="step-content narrow">
-              <div className="section-heading">
-                <span>STEP 3</span>
-                <h2>미션 인증 내용을 작성해주세요</h2>
-                <p>도전의 과정과 결과를 기록해주세요.</p>
+        {view === 'status' && (
+          <section className="participant-content-card">
+            <div className="participant-section-heading">
+              <div>
+                <p className="eyebrow"><ClipboardCheck size={15} /> MY STATUS</p>
+                <h1>내 미션 제출현황</h1>
+                <p>제출 여부와 담당자 확인 상태를 한눈에 확인할 수 있어요.</p>
               </div>
+              <button className="ghost-button" onClick={() => fetchMySubmissions()} disabled={loadingStatus}>
+                <RefreshCw size={16} className={loadingStatus ? 'spin' : ''} /> 새로고침
+              </button>
+            </div>
 
-              <div className="selected-mission-strip detailed">
-                <span>{String(mission.id).padStart(2, '0')}</span>
-                <div><strong>{mission.title}</strong><small>{mission.summary}</small></div>
+            {loadingStatus ? (
+              <div className="check-empty"><Loader2 className="spin" size={28} /><strong>제출현황을 확인하고 있어요.</strong></div>
+            ) : submissions.length === 0 ? (
+              <div className="check-empty">
+                <ClipboardCheck size={28} />
+                <strong>아직 제출한 미션이 없습니다.</strong>
+                <p>미션 탭에서 첫 번째 도전을 시작해보세요.</p>
               </div>
-
-              <label className="field-label">
-                <span className="field-title">활동일 <em>*</em></span>
-                <input
-                  type="date"
-                  className="text-input"
-                  value={form.activityDate}
-                  onChange={(e) => setField('activityDate', e.target.value)}
-                />
-              </label>
-
-              <div className="questions-stack">
-                {mission.questions.map((question, index) => (
-                  <label className="field-label" key={question}>
-                    <span className="field-title question-title">
-                      <span className="question-number">Q{index + 1}</span>
-                      <span>{question}</span>
-                      <em>*</em>
-                    </span>
-                    <textarea
-                      className="text-area"
-                      rows={3}
-                      value={form.answers[index]}
-                      onChange={(e) => setAnswer(index, e.target.value)}
-                      placeholder="내용을 입력해주세요"
-                    />
-                  </label>
-                ))}
+            ) : (
+              <div className="portal-status-list">
+                {submissions.map((record) => {
+                  const item = MISSIONS.find((missionItem) => missionItem.id === Number(record.mission_id))
+                  const checked = record.status === '확인'
+                  return (
+                    <article className="portal-status-row" key={record.submission_id}>
+                      <span className="check-mission-number">{String(record.mission_id).padStart(2, '0')}</span>
+                      <div>
+                        <strong>{item?.title ?? `미션 ${record.mission_id}`}</strong>
+                        <small>활동일 {record.activity_date || '-'} · 제출일 {formatDateTime(record.created_at)}</small>
+                      </div>
+                      <span className={`check-status ${checked ? 'checked' : 'waiting'}`}>
+                        {checked ? <Check size={15} /> : <Loader2 size={15} />}
+                        {checked ? '미션 확인' : '확인 대기'}
+                      </span>
+                    </article>
+                  )
+                })}
               </div>
+            )}
+          </section>
+        )}
 
-              <div className="common-proof-notice">
-                <div className="common-proof-title">
-                  <ImagePlus size={20} />
-                  <strong>공통 인증 안내</strong>
-                </div>
-                <p>모든 미션은 <b>참여자 본인의 얼굴이 포함된 활동사진 1장</b>을 기본으로 제출해 주세요.</p>
-                <p>미션에 따라 걸음 수 캡처, 수거한 쓰레기 사진, 문제 상황 사진 등 <b>추가 인증자료를 함께 제출</b>해야 합니다.</p>
-              </div>
+        {view === 'submit' && mission && (
+          <section className="participant-content-card submit-content-card">
+            <button className="participant-back-button" type="button" onClick={() => { setView('missions'); setError('') }}>
+              <ArrowLeft size={16} /> 미션 목록으로
+            </button>
 
-              <div className="proof-box">
-                <div><ImagePlus size={20} /></div>
-                <p><strong>미션별 인증방법</strong><span>{mission.proof}</span></p>
-              </div>
+            <div className="section-heading">
+              <span>MISSION {String(mission.id).padStart(2, '0')}</span>
+              <h2>{mission.title}</h2>
+              <p>{mission.summary}</p>
+            </div>
 
-              <div className="upload-section">
-                <div className="upload-head">
-                  <div>
-                    <strong className="field-title upload-title">
-                      인증사진 <em>*</em>
-                    </strong>
-                    <span>JPG · JPEG · PNG · WEBP / 원본 장당 최대 10MB / 최대 3장 · 선택 후 자동 압축</span>
-                  </div>
-                  <span>{photos.length}/3</span>
-                </div>
+            <label className="field-label">
+              <span className="field-title">활동일 <em>*</em></span>
+              <input
+                type="date"
+                className="text-input"
+                value={submissionForm.activityDate}
+                onChange={(e) => setSubmissionForm((prev) => ({ ...prev, activityDate: e.target.value }))}
+              />
+            </label>
 
-                <label className={`upload-drop ${photos.length >= 3 || isProcessingPhotos ? 'disabled' : ''}`}>
-                  {isProcessingPhotos ? <Loader2 className="spin" size={24} /> : <Upload size={24} />}
-                  <strong>{isProcessingPhotos ? '사진 압축 중...' : '사진 선택하기'}</strong>
-                  <span>{isProcessingPhotos ? '잠시만 기다려주세요.' : '휴대폰 사진 또는 캡처 이미지를 선택해주세요.'}</span>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    multiple
-                    onChange={handleFiles}
-                    disabled={photos.length >= 3 || isProcessingPhotos}
+            <div className="questions-stack">
+              {mission.questions.map((question, index) => (
+                <label className="field-label" key={question}>
+                  <span className="field-title question-title">
+                    <span className="question-number">Q{index + 1}</span>
+                    <span>{question}</span>
+                    <em>*</em>
+                  </span>
+                  <textarea
+                    className="text-area"
+                    rows={3}
+                    value={submissionForm.answers[index]}
+                    onChange={(e) => setAnswer(index, e.target.value)}
+                    placeholder="내용을 입력해주세요"
                   />
                 </label>
+              ))}
+            </div>
 
-                {previews.length > 0 && (
-                  <div className="preview-grid">
-                    {previews.map((src, index) => (
-                      <div className="preview-item" key={src}>
-                        <img src={src} alt={`인증사진 ${index + 1}`} />
-                        <button type="button" aria-label="사진 삭제" onClick={() => removePhoto(index)}>
-                          <X size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+            <div className="common-proof-notice">
+              <div className="common-proof-title">
+                <ImagePlus size={20} />
+                <strong>공통 인증 안내</strong>
+              </div>
+              <p>모든 미션은 <b>참여자 본인의 얼굴이 포함된 활동사진 1장</b>을 기본으로 제출해 주세요.</p>
+              <p>미션에 따라 걸음 수 캡처, 수거한 쓰레기 사진, 문제 상황 사진 등 <b>추가 인증자료를 함께 제출</b>해야 합니다.</p>
+            </div>
+
+            <div className="proof-box">
+              <div><ImagePlus size={20} /></div>
+              <p><strong>미션별 인증방법</strong><span>{mission.proof}</span></p>
+            </div>
+
+            <div className="upload-section">
+              <div className="upload-head">
+                <div>
+                  <strong className="field-title upload-title">인증사진 <em>*</em></strong>
+                  <span>JPG · JPEG · PNG · WEBP / 원본 장당 최대 10MB / 최대 3장 · 선택 후 자동 압축</span>
+                </div>
+                <span>{photos.length}/3</span>
               </div>
 
-
-
-              <label className="consent-row">
+              <label className={`upload-drop ${photos.length >= 3 || isProcessingPhotos ? 'disabled' : ''}`}>
+                {isProcessingPhotos ? <Loader2 className="spin" size={24} /> : <Upload size={24} />}
+                <strong>{isProcessingPhotos ? '사진 압축 중...' : '사진 선택하기'}</strong>
+                <span>{isProcessingPhotos ? '잠시만 기다려주세요.' : '휴대폰 사진 또는 캡처 이미지를 선택해주세요.'}</span>
                 <input
-                  type="checkbox"
-                  checked={form.consent}
-                  onChange={(e) => setField('consent', e.target.checked)}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  onChange={handleFiles}
+                  disabled={photos.length >= 3 || isProcessingPhotos}
                 />
-                <span>
-                  이름·생년월일·레벨 및 인증자료가 참여자 확인, 추가미션 심사 및 점수 반영을 위해 사용되는 것에 동의합니다. <em>*</em>
-                </span>
               </label>
 
-              {error && <ErrorBox message={error} />}
-              <div className="action-row split final-actions">
-                <button className="ghost-button" onClick={() => { setStep(2); setError('') }} disabled={isSubmitting}>
-                  <ArrowLeft size={18} /> 이전
-                </button>
-                <button className="primary-button submit-button" onClick={handleSubmit} disabled={isSubmitting}>
-                  {isSubmitting ? <><Loader2 size={18} className="spin" /> 제출 중...</> : <>추가미션 인증 제출하기 <ArrowRight size={18} /></>}
-                </button>
-              </div>
+              {previews.length > 0 && (
+                <div className="preview-grid">
+                  {previews.map((src, index) => (
+                    <div className="preview-item" key={src}>
+                      <img src={src} alt={`인증사진 ${index + 1}`} />
+                      <button type="button" aria-label="사진 삭제" onClick={() => removePhoto(index)}>
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </section>
+
+            <label className="consent-row">
+              <input
+                type="checkbox"
+                checked={submissionForm.consent}
+                onChange={(e) => setSubmissionForm((prev) => ({ ...prev, consent: e.target.checked }))}
+              />
+              <span>이름·생년월일·레벨 및 인증자료가 참여자 확인, 추가미션 심사 및 점수 반영을 위해 사용되는 것에 동의합니다. <em>*</em></span>
+            </label>
+
+            {error && <ErrorBox message={error} />}
+
+            <div className="action-row split final-actions">
+              <button className="ghost-button" onClick={() => { setView('missions'); setError('') }} disabled={isSubmitting}>
+                <ArrowLeft size={18} /> 취소
+              </button>
+              <button className="primary-button submit-button" onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting
+                  ? <><Loader2 size={18} className="spin" /> 제출 중...</>
+                  : <>추가미션 인증 제출하기 <ArrowRight size={18} /></>}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {view === 'success' && (
+          <section className="participant-content-card portal-success-card">
+            <div className="success-icon"><Check size={34} strokeWidth={2.3} /></div>
+            <p className="eyebrow">MISSION COMPLETE</p>
+            <h1>{MISSIONS.find((item) => item.id === submittedMissionId)?.title} 제출완료!</h1>
+            <p>접수가 완료되었습니다. 담당자가 확인하면 제출현황에서 '미션 확인'으로 바뀝니다.</p>
+
+            <div className="success-actions">
+              <button className="primary-button success-button" onClick={backToMissions}>
+                다른 미션 도전하기 <ArrowRight size={18} />
+              </button>
+              <button className="ghost-button success-link" onClick={async () => { await fetchMySubmissions(); setView('status') }}>
+                제출현황 보기 <ClipboardCheck size={18} />
+              </button>
+            </div>
+          </section>
+        )}
       </main>
     </div>
   )
@@ -896,8 +1019,8 @@ function LandingPage() {
           <a className="home-action-card primary" href="/submit">
             <span className="home-action-icon"><Play size={27} /></span>
             <div>
-              <strong>미션하러 가기</strong>
-              <p>8개의 추가미션 중 하나를 선택해 도전하고 인증해요.</p>
+              <strong>미션 참여하기</strong>
+              <p>내 정보를 한 번 입력하고, 미션 제출과 진행상태를 한곳에서 확인해요.</p>
             </div>
             <ArrowRight size={22} />
           </a>
@@ -905,155 +1028,20 @@ function LandingPage() {
           <a className="home-action-card" href="/check">
             <span className="home-action-icon"><ClipboardCheck size={27} /></span>
             <div>
-              <strong>제출 확인하기</strong>
-              <p>내가 제출한 미션과 담당자 확인상태를 확인해요.</p>
+              <strong>내 제출현황</strong>
+              <p>로그인 후 제출완료 미션과 담당자 확인상태를 확인해요.</p>
             </div>
             <ArrowRight size={22} />
           </a>
         </section>
 
         <p className="home-note">
-          제출 확인 시 이름, 생년월일, 레벨과 직접 설정한 숫자 6자리 비밀번호가 필요합니다.
+          이름, 생년월일, 레벨과 숫자 6자리 비밀번호를 한 번 입력하면 현재 브라우저 이용 중에는 다시 입력하지 않아도 됩니다.
         </p>
       </main>
     </div>
   )
 }
-
-function SubmissionCheckPage() {
-  const [form, setForm] = useState({ name: '', birthDate: '', level: '', checkCode: '' })
-  const [results, setResults] = useState([])
-  const [searched, setSearched] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const setField = (key, value) => {
-    setForm((prev) => ({ ...prev, [key]: value }))
-    setError('')
-  }
-
-  const lookup = async (event) => {
-    event.preventDefault()
-    setError('')
-    setSearched(false)
-
-    if (!form.name.trim()) return setError('이름을 입력해주세요.')
-    if (!form.birthDate) return setError('생년월일을 입력해주세요.')
-    if (!LEVELS.includes(form.level)) return setError('참여 레벨을 선택해주세요.')
-    if (!/^\d{6}$/.test(form.checkCode)) return setError('비밀번호 6자리를 입력해주세요.')
-
-    setLoading(true)
-    try {
-      const verificationHash = await makeVerificationHash(form.name, form.birthDate, form.level, form.checkCode)
-      const { data, error: lookupError } = await supabase.rpc('lookup_my_submissions', {
-        p_hash: verificationHash,
-      })
-      if (lookupError) throw lookupError
-      setResults(data ?? [])
-      setSearched(true)
-    } catch (err) {
-      console.error('제출현황 확인 오류:', err)
-      setError('제출현황을 확인하지 못했습니다. 잠시 후 다시 시도해주세요.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div className="site-shell">
-      <Header />
-      <main className="check-page">
-        <section className="check-card">
-          <div className="check-heading">
-            <p className="eyebrow"><ClipboardCheck size={15} /> SUBMISSION CHECK</p>
-            <h1>내 미션 제출현황 확인</h1>
-            <p>제출할 때 입력한 정보와 비밀번호를 입력해주세요.</p>
-          </div>
-
-          <form className="check-form" onSubmit={lookup}>
-            <div className="check-form-grid">
-              <label className="field-label">
-                <span className="field-title">이름 <em>*</em></span>
-                <input className="text-input" value={form.name} onChange={(e) => setField('name', e.target.value)} placeholder="이름을 입력해주세요" />
-              </label>
-
-              <label className="field-label">
-                <span className="field-title">생년월일 <em>*</em></span>
-                <input className="text-input" type="date" value={form.birthDate} onChange={(e) => setField('birthDate', e.target.value)} aria-label="생년월일" />
-              </label>
-
-              <label className="field-label">
-                <span className="field-title">참여 레벨 <em>*</em></span>
-                <select className="text-input select-input" value={form.level} onChange={(e) => setField('level', e.target.value)}>
-                  <option value="">레벨을 선택해주세요</option>
-                  {LEVELS.map((level) => <option key={level} value={level}>{level}</option>)}
-                </select>
-              </label>
-
-              <label className="field-label">
-                <span className="field-title">비밀번호 <em>*</em></span>
-                <div className="check-code-input-wrap">
-                  <KeyRound size={18} />
-                  <input className="text-input" value={form.checkCode} onChange={(e) => setField('checkCode', e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="숫자 6자리" inputMode="numeric" maxLength={6} />
-                </div>
-              </label>
-            </div>
-
-            {error && <ErrorBox message={error} />}
-            <div className="check-form-actions">
-              <a className="ghost-button" href="/"><ArrowLeft size={17} /> 처음으로</a>
-              <button className="primary-button" disabled={loading}>
-                {loading ? <><Loader2 size={18} className="spin" /> 확인 중...</> : <><Search size={18} /> 제출현황 확인</>}
-              </button>
-            </div>
-          </form>
-        </section>
-
-        {searched && (
-          <section className="check-results">
-            <div className="check-results-heading">
-              <div>
-                <h2>제출한 미션</h2>
-                <p>총 {results.length}건의 제출내역을 확인했습니다.</p>
-              </div>
-              <a href="/submit" className="primary-button check-new-mission">미션하러 가기 <ArrowRight size={17} /></a>
-            </div>
-
-            {results.length === 0 ? (
-              <div className="check-empty">
-                <ClipboardCheck size={28} />
-                <strong>일치하는 제출내역이 없습니다.</strong>
-                <p>입력정보와 제출확인 번호가 맞는지 다시 확인해주세요.</p>
-              </div>
-            ) : (
-              <div className="check-result-list">
-                {results.map((record) => {
-                  const mission = MISSIONS.find((item) => item.id === Number(record.mission_id))
-                  const checked = record.status === '확인'
-                  return (
-                    <article className="check-result-row" key={record.submission_id}>
-                      <span className="check-mission-number">{String(record.mission_id).padStart(2, '0')}</span>
-                      <div className="check-result-copy">
-                        <strong>{mission?.title ?? `미션 ${record.mission_id}`}</strong>
-                        <span>활동일 {record.activity_date || '-'}</span>
-                        <span>제출일 {formatDateTime(record.created_at)}</span>
-                      </div>
-                      <span className={`check-status ${checked ? 'checked' : 'waiting'}`}>
-                        {checked ? <Check size={15} /> : <Loader2 size={15} />}
-                        {checked ? '미션 확인' : '확인 대기'}
-                      </span>
-                    </article>
-                  )
-                })}
-              </div>
-            )}
-          </section>
-        )}
-      </main>
-    </div>
-  )
-}
-
 
 function AdminPage() {
   const [session, setSession] = useState(null)
