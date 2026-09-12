@@ -2093,3 +2093,35 @@ input[type="date"].text-input { width:100%; min-width:0; box-sizing:border-box; 
   width: 100%;
   box-sizing: border-box;
 }
+
+
+/* ===== 관리자 권한 배지 ===== */
+.admin-role-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.admin-role-badge.super {
+  background: #f5ead0;
+  color: #765917;
+  border: 1px solid #e6d19b;
+}
+
+.admin-role-badge.staff {
+  background: #e8f2ec;
+  color: #2f654b;
+  border: 1px solid #c9ddd0;
+}
+
+@media (max-width: 700px) {
+  .admin-header-actions {
+    flex-wrap: wrap;
+  }
+}
