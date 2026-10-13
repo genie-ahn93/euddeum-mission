@@ -2526,3 +2526,43 @@ input[type="date"].text-input { width:100%; min-width:0; box-sizing:border-box; 
     max-height: calc(100vh - 36px) !important;
   }
 }
+
+/* 관리자 팝업 창 자체를 화면 위쪽에 강제 고정 */
+.admin-reject-card,
+.admin-reset-card,
+.admin-clear-card {
+  position: fixed !important;
+  top: 30px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+
+  margin: 0 !important;
+  z-index: 10000 !important;
+
+  max-height: calc(100vh - 60px) !important;
+  overflow-y: auto !important;
+}
+
+/* 상세보기 창도 동일하게 */
+.admin-detail-card {
+  position: fixed !important;
+  top: 30px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+
+  margin: 0 !important;
+  z-index: 10000 !important;
+
+  max-height: calc(100vh - 60px) !important;
+  overflow-y: auto !important;
+}
+
+@media (max-width: 700px) {
+  .admin-reject-card,
+  .admin-reset-card,
+  .admin-clear-card,
+  .admin-detail-card {
+    top: 15px !important;
+    max-height: calc(100vh - 30px) !important;
+  }
+}
