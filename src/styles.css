@@ -2566,3 +2566,14 @@ input[type="date"].text-input { width:100%; min-width:0; box-sizing:border-box; 
     max-height: calc(100vh - 30px) !important;
   }
 }
+
+/* 반려/비밀번호 재설정 모달을 참가자 상세보기보다 위에 표시 */
+.admin-reject-modal,
+.admin-reset-modal {
+  z-index: 20000 !important;
+}
+
+.admin-reject-modal .admin-reject-card,
+.admin-reset-modal .admin-reset-card {
+  z-index: 20001 !important;
+}
