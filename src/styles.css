@@ -2237,3 +2237,251 @@ input[type="date"].text-input { width:100%; min-width:0; box-sizing:border-box; 
     justify-content: center;
   }
 }
+
+
+/* ===== 반려 기능 ===== */
+.mission-rejected-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #fff0ed;
+  color: #a4483b;
+  font-size: 10px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.portal-mission-card.rejected {
+  border-color: #e3aea5;
+  background: #fffafa;
+  cursor: pointer;
+}
+
+.portal-mission-card.rejected:hover {
+  border-color: #c97567;
+  box-shadow: 0 8px 24px rgba(150, 70, 57, .08);
+}
+
+.mission-status-line.rejected,
+.check-status.rejected {
+  color: #a4483b;
+}
+
+.mission-rejection-reason {
+  display: grid;
+  gap: 4px;
+  margin-top: 11px;
+  padding: 10px 11px;
+  border-radius: 10px;
+  background: #fff0ed;
+  color: #884238;
+  font-size: 10px;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.mission-rejection-reason strong {
+  font-size: 10px;
+}
+
+.portal-status-row.rejected {
+  border-color: #ebc1ba;
+  background: #fffafa;
+}
+
+.status-rejection-reason {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: #fff0ed;
+  color: #87463c;
+  font-size: 10px;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.status-rejection-reason b {
+  color: #a4483b;
+}
+
+.status-resubmit-button {
+  width: fit-content;
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 9px;
+  border: 1px solid #d99d92;
+  border-radius: 8px;
+  background: white;
+  color: #9b4a3d;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.resubmit-rejection-box {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  margin: 0 0 20px;
+  padding: 14px 15px;
+  border: 1px solid #e4b1a8;
+  border-radius: 13px;
+  background: #fff3f0;
+  color: #8c493e;
+}
+
+.resubmit-rejection-box > div:first-child {
+  padding-top: 2px;
+}
+
+.resubmit-rejection-box strong {
+  color: #9b4639;
+  font-size: 13px;
+}
+
+.resubmit-rejection-box p {
+  margin: 5px 0 4px;
+  font-size: 12px;
+  line-height: 1.65;
+  word-break: keep-all;
+}
+
+.resubmit-rejection-box small {
+  color: #8a6e68;
+  font-size: 10px;
+}
+
+/* 관리자 반려 */
+.admin-status-select.rejected {
+  border-color: #d9a097;
+  background: #fff1ee;
+  color: #9b4639;
+}
+
+.admin-reject-card {
+  width: min(560px, calc(100vw - 30px));
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  position: relative;
+  padding: 24px;
+  border-radius: 18px;
+  background: #fffdf9;
+  box-shadow: 0 22px 70px rgba(42, 52, 45, .18);
+}
+
+.admin-reject-heading {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding-right: 36px;
+}
+
+.admin-reject-heading h2 {
+  margin: 0;
+  color: #703e36;
+  font-size: 21px;
+}
+
+.admin-reject-heading p {
+  margin: 4px 0 0;
+  color: #7f7f78;
+  font-size: 11px;
+}
+
+.admin-reject-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #fff0ed;
+  color: #a4483b;
+}
+
+.admin-reject-guide {
+  margin: 18px 0 14px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: #f7f5f1;
+  color: #6f736e;
+  font-size: 11px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.admin-rejection-textarea {
+  min-height: 120px;
+}
+
+.admin-reject-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.reject-confirm-button {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: #a94f42;
+  color: #fff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.reject-confirm-button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.admin-rejection-summary {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border: 1px solid #ebc1ba;
+  border-radius: 11px;
+  background: #fff3f0;
+}
+
+.admin-rejection-summary > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #a4483b;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.admin-rejection-summary p {
+  margin: 7px 0 0;
+  color: #7f4a42;
+  font-size: 11px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+@media (max-width: 700px) {
+  .admin-reject-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .reject-confirm-button,
+  .admin-reject-actions .ghost-button {
+    width: 100%;
+  }
+}
