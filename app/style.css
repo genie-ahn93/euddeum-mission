@@ -1,0 +1,69 @@
+:root{font-family:Arial,'Noto Sans KR',sans-serif;color:#172350;background:#f6f8ff}*{box-sizing:border-box}body{margin:0}button,input,textarea,select{font:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}.wrap{max-width:1140px;margin:auto;padding:32px 22px}.top{display:flex;justify-content:space-between;gap:16px;align-items:center;padding:20px 0}.logo{font-weight:900;font-size:24px;color:#4e55e9;letter-spacing:-1px}.logo span{color:#f4a423}.hero{background:linear-gradient(125deg,#6557e9,#4aa6ec);border-radius:32px;color:white;padding:62px 54px;position:relative;overflow:hidden}.hero h1{font-size:clamp(32px,5vw,58px);line-height:1.25;margin:18px 0}.hero p{opacity:.91;font-size:18px;line-height:1.7;max-width:550px}.tag{display:inline-block;background:#ffffff2d;border:1px solid #ffffff50;border-radius:100px;padding:8px 16px}.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}.btn{border:0;background:#544ce5;color:white;border-radius:13px;padding:12px 19px;font-weight:800;display:inline-flex;gap:8px;align-items:center;justify-content:center}.btn:hover{filter:brightness(1.06)}.btn.secondary{background:white;color:#514ce2}.btn.ghost{background:#eef0ff;color:#4f4ad4}.btn.danger{background:#ffe5e7;color:#c72e51}.btn:disabled{opacity:.55;cursor:not-allowed}.card{background:white;border:1px solid #e8eaf5;border-radius:21px;padding:24px;box-shadow:0 8px 26px #1a25500a}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.grid.two{grid-template-columns:repeat(2,1fr)}.muted{color:#69718d}.small{font-size:13px}.input{width:100%;background:#f8f9fd;border:1px solid #dfe3ef;border-radius:12px;padding:13px 15px;outline:none;color:#172350}.input:focus{border-color:#6759e9}label{display:block;font-weight:700;margin-bottom:8px}.field{margin:15px 0}.pill{font-size:12px;font-weight:800;background:#edeaff;color:#5749df;padding:7px 10px;border-radius:50px}.stack{display:flex;flex-direction:column;gap:14px}.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.between{justify-content:space-between}.title{font-size:32px;margin:14px 0}.panel{display:grid;grid-template-columns:290px minmax(0,1fr);gap:20px}.slideItem{width:100%;text-align:left;background:white;border:1px solid #e2e5f0;border-radius:13px;padding:14px;color:#26315b}.slideItem.active{border:2px solid #6759e9;background:#f0efff}.results{margin-top:22px}.barTrack{height:16px;background:#edf0f8;border-radius:30px;overflow:hidden}.barFill{height:100%;background:linear-gradient(90deg,#6655ec,#3da7f4);border-radius:30px}.bubble{display:inline-flex;align-items:center;margin:6px;background:#eeedff;padding:12px 16px;border-radius:16px}.big{font-size:clamp(28px,4vw,58px);font-weight:900}.center{text-align:center}.answer{min-height:68px;text-align:left;display:flex;align-items:center;gap:12px;width:100%;background:#f8f9ff;color:#19204e;border:2px solid #e4e7f4;border-radius:16px;padding:19px;font-weight:700}.answer.selected{background:#eae8ff;border-color:#6557ec}.present{min-height:100vh;background:linear-gradient(135deg,#252561,#4d48ac);color:white;padding:30px}.present .card{color:#162451}.present h1{font-size:clamp(30px,4.6vw,70px);margin:35px 0}.present .barTrack{background:#dfe3fa}.present .pill{background:#ffffff29;color:white}.footer{padding:40px 0;color:#8c92ac}.divider{height:1px;background:#e7e9f3;margin:22px 0}@media(max-width:760px){.grid,.grid.two,.panel{grid-template-columns:1fr}.hero{padding:35px 26px}.wrap{padding:14px}.top{flex-wrap:wrap}.card{padding:18px}.present{padding:14px}.title{font-size:25px}}
+
+/* Presentation refresh: visually separate the QR, question, subtitle, and result cards. */
+.presentRevamped{position:relative;background:linear-gradient(125deg,#6557e9 0%,#4d91ee 100%);padding:28px 30px 50px;overflow-x:hidden}
+.presentRevamped .presentQr{position:absolute;right:30px;top:102px;z-index:2;width:142px;padding:10px;border:1px solid #ffffff60;background:#ffffff28;border-radius:18px;display:flex;flex-direction:column;align-items:center;gap:6px;color:white;box-shadow:0 10px 25px #28399727}
+.presentRevamped .presentQr img{width:120px;height:120px;background:white;border-radius:10px;padding:6px}
+.presentRevamped .presentQr small{font-size:12px;font-weight:800}
+.presentRevamped .presentQuestion{max-width:1100px;padding:0 150px;margin:65px auto 35px}
+.presentRevamped .questionLabel{display:inline-block;background:#ffffff26;border:1px solid #ffffff50;border-radius:40px;padding:9px 18px;font-size:15px;font-weight:800;letter-spacing:.04em}
+.presentRevamped .presentQuestion h1{font-size:clamp(42px,5vw,74px);margin:22px auto 26px;line-height:1.2;letter-spacing:-.04em}
+.presentRevamped .questionDescription{display:inline-block;background:#ffffff22;border:1px solid #ffffff55;border-radius:16px;padding:15px 25px;font-size:clamp(19px,1.8vw,26px);font-weight:650;line-height:1.5;margin:0}
+.presentRevamped .resultCard{border-radius:21px;box-shadow:0 12px 26px #182d7c18;animation:cardEnter .4s ease both}
+.presentRevamped .choiceNumber{display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center;border-radius:11px;background:#eeecff;color:#5d50e2;font-size:16px;font-weight:900}
+.presentRevamped .barFill{transition:width .6s ease}
+.qrBackdrop{position:fixed!important;inset:0;background:#11183bbd;z-index:30;display:flex;align-items:center;justify-content:center;padding:20px}
+.qrModal{background:white;color:#172350;padding:26px;border-radius:24px;text-align:center;max-width:365px;width:100%}
+.qrModal img{width:260px;max-width:100%;background:white;display:block;margin:16px auto}
+@keyframes cardEnter{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:800px){.presentRevamped .presentQr{right:12px;top:85px;width:105px}.presentRevamped .presentQr img{width:85px;height:85px}.presentRevamped .presentQuestion{padding:0 95px;margin-top:85px}}
+@media(max-width:520px){.presentRevamped{padding:14px}.presentRevamped .presentQr{position:relative;top:auto;right:auto;margin:15px 0 0 auto}.presentRevamped .presentQuestion{padding:0;margin:20px auto 30px}}
+@media(prefers-reduced-motion:reduce){.presentRevamped .resultCard{animation:none}.presentRevamped .barFill{transition:none}}
+
+/* GENIE:Q visual system — preserve existing class contracts */
+:root{font-family:Pretendard,"Noto Sans KR",Arial,sans-serif;color:#192040;background:#f5f4fb}
+.logo{color:#28205d;font-size:27px;letter-spacing:-.8px;font-weight:900}.logo span{color:#bc8a32}
+.hero{background:radial-gradient(ellipse at 80% 15%,rgba(140,102,230,.5),transparent 45%),linear-gradient(125deg,#1b1d4a,#50409c 60%,#5751a5);box-shadow:0 18px 44px #22204721}
+.btn{background:#5143a2}.btn.ghost{background:#edeafa;color:#4c408c}
+.present.presentRevamped{background:radial-gradient(ellipse at 53% 7%,rgba(140,108,220,.33),transparent 55%),radial-gradient(ellipse at 100% 92%,rgba(88,84,185,.2),transparent 55%),linear-gradient(125deg,#171838,#342459 65%,#29264f);min-height:100vh;overflow-x:hidden}
+.presentRevamped:before{content:"";position:fixed;pointer-events:none;inset:0;background:radial-gradient(circle at 8% 32%,rgba(255,209,117,.075),transparent 26%),radial-gradient(circle at 88% 70%,rgba(172,144,243,.10),transparent 27%)}
+.presentRevamped .logo{color:#fff!important}.presentRevamped .logo span{color:#f6cd7a}
+.presentRevamped .pill{background:#ffffff18;color:#f9f5ff;border:1px solid #ffffff25}
+.presentRevamped .presentQuestion{position:relative;margin:68px auto 42px;max-width:1100px}
+.presentRevamped .presentQuestion h1{font-weight:900;line-height:1.16;font-size:clamp(40px,5vw,84px);letter-spacing:-.045em;margin:22px 0 26px;text-shadow:0 5px 32px #c7adfa35}
+.presentRevamped .questionLabel{background:#f4cb7326;color:#f7d28b;border:1px solid #f4cb7369;letter-spacing:.12em;padding:8px 20px}
+.presentRevamped .questionDescription{color:#f5f0ff;background:#ffffff13;border:1px solid #ffffff2f;padding:16px 28px;border-radius:22px;font-size:clamp(16px,1.7vw,26px);font-weight:500;line-height:1.55;max-width:850px;display:table;margin:0 auto}
+.presentRevamped .presentQr{top:90px;right:32px;transform:none;box-shadow:0 10px 32px #08082455;background:#ffffffef;border:2px solid #edddff;padding:10px;width:114px}
+.presentRevamped .presentQr img{width:90px;height:90px}.presentRevamped .presentQr small{font-size:10px;color:#3e335b}
+.presentRevamped .resultCard{background:#ffffff14;color:#fff;border:1px solid #ffffff27;box-shadow:0 12px 30px #0b0a2525;border-radius:22px;padding:20px!important}
+.presentRevamped .resultCard .choiceNumber{background:#f3d289;color:#30204c}
+.presentRevamped .barTrack{background:#ffffff21;height:14px}
+.presentRevamped .barFill{background:linear-gradient(90deg,#d8bdff,#f4d17e);box-shadow:0 0 16px #e0bb7b55;transition:width .6s ease}
+.presentRevamped .stack{position:relative}
+.presentRevamped .btn.secondary{background:#ffffffeb;color:#302859}
+@media(max-width:760px){.presentRevamped .presentQr{top:83px;right:14px;width:87px;padding:7px}.presentRevamped .presentQr img{width:69px;height:69px}.presentRevamped .presentQr small{font-size:8px}.presentRevamped .presentQuestion{margin-top:105px}.presentRevamped .presentQuestion h1{font-size:clamp(34px,9vw,55px)}}
+
+/* GENIE:Q 3.0 - one-slide editor and show controls */
+.admin-v3 .panel{grid-template-columns:230px minmax(0,1fr)}.editor-grid{display:grid;grid-template-columns:245px minmax(0,1fr);gap:16px;align-items:start}.editor-nav{max-height:65vh;overflow-y:auto;position:sticky;top:12px}.editor-nav .slideItem{overflow-wrap:anywhere}.run-layout{display:grid;grid-template-columns:320px minmax(0,1fr);gap:18px}.run-slides{max-height:72vh;overflow-y:auto}.run-preview{aspect-ratio:16/9;background:linear-gradient(120deg,#171838,#49356f);color:#fff;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}.run-preview h2{font-size:clamp(22px,3vw,44px)}@media(max-width:980px){.admin-v3 .panel,.editor-grid,.run-layout{grid-template-columns:1fr}.editor-nav{position:static;max-height:260px}}
+
+/* GENIE:Q - scale visualization and one-line auto fitted question */
+.presentRevamped .presentQuestion{max-width:none;width:100%;padding:0 120px;box-sizing:border-box}
+.fittedQuestion{width:100%;min-width:0;position:relative}
+.presentRevamped .fittedQuestion h1{white-space:nowrap;overflow:visible;line-height:1.2;margin:20px 0 24px;max-width:100%;font-weight:900}
+.fittedMeasure{position:absolute;visibility:hidden;pointer-events:none;white-space:nowrap;font-size:74px;font-weight:900;letter-spacing:-.045em;line-height:1.2;left:0;top:0}
+.scalePanel{max-width:1080px;margin:0 auto;display:grid;justify-items:center;gap:12px;position:relative}
+.scaleGaugeWrap{display:flex;flex-direction:column;align-items:center;width:100%}
+.scaleGaugeSvg{width:min(520px,95vw);max-height:295px;overflow:visible}
+.scaleGaugeValue{font-weight:900;fill:#fff;font-size:68px}
+.scaleGaugeUnit{font-size:17px;font-weight:700;fill:#e8defa}
+.scaleGaugeEdge{font-size:14px;font-weight:800;fill:#d5c7ed}
+.scaleCount{background:#ffffff1a;border:1px solid #ffffff35;border-radius:100px;padding:10px 26px;font-size:19px;font-weight:800;margin-top:-5px}
+.scaleDistribution{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:19px;width:100%;max-width:900px;margin-top:12px}
+.scaleColumn{display:flex;flex-direction:column;align-items:center;gap:7px;min-width:0;font-weight:800}
+.scaleColumn b{font-size:18px}.scaleColumn b span{font-size:14px;color:#dcd2f3;margin-left:4px}
+.scaleBarBox{height:110px;width:100%;display:flex;align-items:end;border-bottom:2px solid #ffffff75}
+.scaleBar{width:100%;min-height:0;border-radius:12px 12px 0 0;background:linear-gradient(180deg,#ffdb82,#ab8ef8);transition:height .6s ease}
+.scaleColumn strong{font-size:17px}
+@media(max-width:900px){.presentRevamped .presentQuestion{padding:0 75px}.scaleDistribution{gap:8px}.scaleColumn b{font-size:14px}.scaleColumn b span{font-size:12px}}
+@media(max-width:520px){.presentRevamped .presentQuestion{padding:0}.scaleGaugeSvg{width:100%}.scaleDistribution{gap:5px}.scaleColumn b span{display:block;text-align:center}.scaleBarBox{height:80px}}
+@media(prefers-reduced-motion:reduce){.scaleBar{transition:none}}
